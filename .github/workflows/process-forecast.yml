@@ -1,0 +1,49 @@
+# Scheduled job to process new forecast data
+name: Process Forecast
+
+on:
+  schedule:
+    # Run every 6 hours, aligned with ECMWF forecast cycles
+    - cron: '30 6,12,18,0 * * *'
+  workflow_dispatch:
+    inputs:
+      use_mock:
+        description: 'Use mock data instead of Arraylake'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Process forecast
+        run: |
+          python -m src.main ${{ github.event.inputs.use_mock == 'true' && '--mock' || '' }}
+        env:
+          ARRAYLAKE_TOKEN: ${{ secrets.ARRAYLAKE_TOKEN }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET || 'whenwx-data' }}
+          GCS_OUTPUT_PREFIX: ${{ vars.GCS_OUTPUT_PREFIX || 'output' }}
+          GOOGLE_CLOUD_PROJECT: ${{ vars.GCP_PROJECT }}

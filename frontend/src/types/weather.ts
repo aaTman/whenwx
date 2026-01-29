@@ -1,0 +1,53 @@
+/**
+ * Weather types and interfaces for WhenWX
+ */
+
+export interface Location {
+  latitude: number;
+  longitude: number;
+  name?: string;
+}
+
+export interface WeatherEvent {
+  id: string;
+  name: string;
+  description: string;
+  variable: string;        // ECMWF variable name (e.g., 't2m', 'tprate')
+  threshold: number;       // Threshold value in native units
+  thresholdDisplay: number; // Threshold for display (e.g., -10 instead of 263.15K)
+  operator: 'lt' | 'gt' | 'lte' | 'gte' | 'eq';
+  unit: string;
+}
+
+export interface ConfidenceBand {
+  earliest: string | null;
+  latest: string | null;
+}
+
+export interface EventTiming {
+  firstBreachTime: string | null;
+  durationHours: number | null;
+  modelConsistency: number;
+  confidenceBand: ConfidenceBand;
+}
+
+export interface WeatherQueryResult {
+  location: Location;
+  event: WeatherEvent;
+  timing: EventTiming;
+  forecastInitTime: string;
+  queryTime: string;
+  dataSource: string;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  status: 'success' | 'error';
+  message?: string;
+}
+
+export interface QueryParams {
+  lat: number;
+  lon: number;
+  eventId: string;
+}

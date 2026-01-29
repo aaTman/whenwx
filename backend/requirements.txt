@@ -1,0 +1,13 @@
+# Data processing
+arraylake>=0.10.0
+xarray>=2024.1.0
+zarr>=2.18.0
+dask>=2024.1.0
+numpy>=1.26.0
+
+# Cloud storage
+gcsfs>=2024.1.0
+google-cloud-storage>=2.14.0
+
+# Utilities
+python-dotenv>=1.0.0

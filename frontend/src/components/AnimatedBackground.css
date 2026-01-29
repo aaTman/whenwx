@@ -1,0 +1,184 @@
+/* Animated gradient background with floating orbs */
+
+.animated-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: -1;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
+
+/* Subtle noise texture overlay */
+.noise-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Gradient orbs */
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.5;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+/* Default theme - cool blues */
+.animated-background.default .orb-1 {
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.6) 0%, transparent 70%);
+  top: -200px;
+  left: -150px;
+  animation: moveVertical 30s ease-in-out infinite;
+}
+
+.animated-background.default .orb-2 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.5) 0%, transparent 70%);
+  bottom: -150px;
+  right: -100px;
+  animation: moveHorizontal 35s ease-in-out infinite;
+}
+
+.animated-background.default .orb-3 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, transparent 70%);
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: moveInCircle 40s linear infinite;
+}
+
+/* Cold theme - icy blues and whites */
+.animated-background.cold .orb-1 {
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(147, 197, 253, 0.7) 0%, transparent 70%);
+  top: -200px;
+  left: -150px;
+  animation: moveVertical 30s ease-in-out infinite;
+}
+
+.animated-background.cold .orb-2 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(191, 219, 254, 0.5) 0%, transparent 70%);
+  bottom: -150px;
+  right: -100px;
+  animation: moveHorizontal 35s ease-in-out infinite;
+}
+
+.animated-background.cold .orb-3 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(224, 242, 254, 0.4) 0%, transparent 70%);
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: moveInCircle 40s linear infinite;
+}
+
+/* Warm theme - sunset oranges */
+.animated-background.warm .orb-1 {
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.6) 0%, transparent 70%);
+  top: -200px;
+  left: -150px;
+  animation: moveVertical 30s ease-in-out infinite;
+}
+
+.animated-background.warm .orb-2 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.5) 0%, transparent 70%);
+  bottom: -150px;
+  right: -100px;
+  animation: moveHorizontal 35s ease-in-out infinite;
+}
+
+.animated-background.warm .orb-3 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(253, 186, 116, 0.4) 0%, transparent 70%);
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: moveInCircle 40s linear infinite;
+}
+
+/* Storm theme - dark grays and purples */
+.animated-background.storm .orb-1 {
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(107, 114, 128, 0.6) 0%, transparent 70%);
+  top: -200px;
+  left: -150px;
+  animation: moveVertical 25s ease-in-out infinite;
+}
+
+.animated-background.storm .orb-2 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, transparent 70%);
+  bottom: -150px;
+  right: -100px;
+  animation: moveHorizontal 30s ease-in-out infinite;
+}
+
+.animated-background.storm .orb-3 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(75, 85, 99, 0.5) 0%, transparent 70%);
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: moveInCircle 35s linear infinite;
+}
+
+/* Animations */
+@keyframes moveVertical {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(80px) scale(1.05);
+  }
+}
+
+@keyframes moveHorizontal {
+  0%, 100% {
+    transform: translateX(0) scale(1);
+  }
+  50% {
+    transform: translateX(-80px) scale(1.05);
+  }
+}
+
+@keyframes moveInCircle {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(60px) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(60px) rotate(-360deg);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .gradient-orb {
+    animation: none !important;
+  }
+}
