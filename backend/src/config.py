@@ -23,7 +23,7 @@ class WeatherEventConfig:
 WEATHER_EVENTS = [
     WeatherEventConfig(
         event_id='freezing',
-        variable='t2m',
+        variable='2t',
         threshold=263.15,  # -10°C in Kelvin
         operator='lt',
         unit='K',
@@ -38,8 +38,8 @@ class Config:
     """Application configuration."""
 
     # Arraylake settings
-    arraylake_org: str = os.getenv('ARRAYLAKE_ORG', 'earthmover-public')
-    arraylake_repo: str = os.getenv('ARRAYLAKE_REPO', 'ecmwf-ifs-oper')
+    arraylake_org: str = os.getenv('ARRAYLAKE_ORG', 'extreme-earth')
+    arraylake_repo: str = os.getenv('ARRAYLAKE_REPO', 'ifs-hres')
     arraylake_token: str = os.getenv('ARRAYLAKE_TOKEN', '')
 
     # GCS settings
@@ -53,7 +53,7 @@ class Config:
         # Chunking optimized for point queries
         # Each point's full time series is in a single chunk
         self.chunk_spec = {
-            'valid_time': -1,  # All timesteps together
+            'step': -1,  # All timesteps together
             'latitude': 1,
             'longitude': 1,
         }

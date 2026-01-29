@@ -18,7 +18,7 @@ class TemperatureProcessor(WeatherProcessor):
         event_id: str,
         threshold_kelvin: float,
         operator: Literal['lt', 'gt', 'lte', 'gte'] = 'lt',
-        variable: str = 't2m'
+        variable: str = '2t'
     ):
         """
         Initialize the temperature processor.
@@ -27,7 +27,7 @@ class TemperatureProcessor(WeatherProcessor):
             event_id: Unique identifier for this event
             threshold_kelvin: Temperature threshold in Kelvin
             operator: Comparison operator ('lt' for cold, 'gt' for hot)
-            variable: ECMWF variable name (default: 't2m' for 2m temperature)
+            variable: Brightband variable name (default: '2t' for 2m temperature)
         """
         self._event_id = event_id
         self._threshold = threshold_kelvin
@@ -75,7 +75,7 @@ class TemperatureProcessor(WeatherProcessor):
             event_id='freezing',
             threshold_kelvin=cls.celsius_to_kelvin(threshold_celsius),
             operator='lt',
-            variable='t2m'
+            variable='2t'
         )
 
     @classmethod
@@ -93,5 +93,5 @@ class TemperatureProcessor(WeatherProcessor):
             event_id='heat',
             threshold_kelvin=cls.celsius_to_kelvin(threshold_celsius),
             operator='gt',
-            variable='t2m'
+            variable='2t'
         )

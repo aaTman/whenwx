@@ -65,11 +65,11 @@ EVENTS = {
         id='freezing',
         name='Freezing Temperatures',
         description='Temperature drops below -10°C',
-        variable='t2m',
+        variable='2t',
         threshold=263.15,
         thresholdDisplay=-10,
         operator='lt',
-        unit='°C'
+        unit='K'
     ),
 }
 

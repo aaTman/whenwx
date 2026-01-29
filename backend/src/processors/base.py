@@ -25,7 +25,7 @@ class WeatherProcessor(ABC):
     @property
     @abstractmethod
     def variable(self) -> str:
-        """The ECMWF variable name to process (e.g., 't2m', 'tprate')."""
+        """The Brightband variable name to process (e.g., '2t', 'tprate')."""
         pass
 
     @property
@@ -66,7 +66,7 @@ class WeatherProcessor(ABC):
     def compute_first_breach(
         self,
         mask: xr.DataArray,
-        time_dim: str = 'valid_time'
+        time_dim: str = 'time'
     ) -> xr.DataArray:
         """
         Find the first timestep where the condition is met.
@@ -95,7 +95,7 @@ class WeatherProcessor(ABC):
     def compute_duration(
         self,
         mask: xr.DataArray,
-        time_dim: str = 'valid_time',
+        time_dim: str = 'time',
         timestep_hours: float = 3.0
     ) -> xr.DataArray:
         """
@@ -144,7 +144,7 @@ class WeatherProcessor(ABC):
     def compute_metrics(
         self,
         ds: xr.Dataset,
-        time_dim: str = 'valid_time'
+        time_dim: str = 'time'
     ) -> xr.Dataset:
         """
         Compute all metrics for this weather event.

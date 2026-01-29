@@ -52,7 +52,7 @@ def process_forecast(use_mock: bool = False, local_output: Optional[str] = None)
     for event_config in WEATHER_EVENTS:
         logger.info(f"Processing event: {event_config.event_id}")
 
-        if event_config.variable == 't2m':
+        if event_config.variable == '2t':
             processor = TemperatureProcessor(
                 event_id=event_config.event_id,
                 threshold_kelvin=event_config.threshold,

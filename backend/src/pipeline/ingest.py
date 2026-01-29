@@ -19,8 +19,8 @@ class ArraylakeDataFetcher:
 
     def __init__(
         self,
-        org: str = 'earthmover-public',
-        repo: str = 'ecmwf-ifs-oper',
+        org: str = 'extreme-earth',
+        repo: str = 'ifs-hres',
         token: Optional[str] = None
     ):
         """
@@ -145,10 +145,10 @@ def create_mock_dataset() -> xr.Dataset:
 
     ds = xr.Dataset(
         {
-            't2m': (['valid_time', 'latitude', 'longitude'], temp_data),
+            '2t': (['time', 'latitude', 'longitude'], temp_data),
         },
         coords={
-            'valid_time': times,
+            'time': times,
             'latitude': lats,
             'longitude': lons,
         },

@@ -12,7 +12,7 @@ export interface WeatherEvent {
   id: string;
   name: string;
   description: string;
-  variable: string;        // ECMWF variable name (e.g., 't2m', 'tprate')
+  variable: string;        // Brightband variable name (e.g., '2t', 'tprate')
   threshold: number;       // Threshold value in native units
   thresholdDisplay: number; // Threshold for display (e.g., -10 instead of 263.15K)
   operator: 'lt' | 'gt' | 'lte' | 'gte' | 'eq';
