@@ -180,14 +180,6 @@ def create_app() -> FastAPI:
     plugin = WeatherQueryPlugin()
     router = plugin.dataset_router(deps)
 
-    # Apply rate limit to query endpoint
-    @app.middleware("http")
-    async def rate_limit_queries(request: Request, call_next):
-        if "/query" in request.url.path:
-            # Apply 1 request per minute limit
-            await limiter.check(config.rate_limit, request)
-        return await call_next(request)
-
     # Register routes
     app.include_router(router)
 

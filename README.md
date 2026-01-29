@@ -73,6 +73,8 @@ whenwx/
 
 ## Development
 
+This project uses `uv` for Python dependency management.
+
 ### Frontend
 
 ```bash
@@ -87,8 +89,8 @@ Visit http://localhost:3000
 
 ```bash
 cd api
-pip install -r requirements.txt
-DEMO_MODE=true python -m uvicorn src.main:app --reload
+uv sync                                                    # Install dependencies
+DEMO_MODE=true uv run uvicorn src.main:app --reload        # Start server
 ```
 
 Visit http://localhost:8000/docs
@@ -97,10 +99,10 @@ Visit http://localhost:8000/docs
 
 ```bash
 cd backend
-pip install -r requirements.txt
+uv sync                                                    # Install dependencies
 
 # Test with mock data
-python -m src.main --mock --local ./output.zarr
+uv run python -m src.main --mock --local ./output.zarr
 ```
 
 ## Deployment
