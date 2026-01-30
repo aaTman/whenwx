@@ -12,7 +12,7 @@ primary_region = 'iad'
 [env]
   CORS_ORIGINS = '*'
   RATE_LIMIT = '1/minute'
-  GCS_BUCKET = 'whenwx-data'
+  GCS_BUCKET = 'whenwx-forecast-data'
   GCS_PREFIX = 'output'
 
 [http_service]

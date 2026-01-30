@@ -6,7 +6,7 @@
 
   color-scheme: dark;
   color: rgba(255, 255, 255, 0.95);
-  background-color: #0f172a;
+  background-color: #0a1628;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -31,7 +31,7 @@ body {
 }
 
 a {
-  color: rgba(147, 197, 253, 0.9);
+  color: #00BAF8;
   text-decoration: none;
   transition: color 0.2s;
 }

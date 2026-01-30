@@ -16,8 +16,13 @@
   gap: 0.5rem;
 }
 
-.location-text-input {
+.location-input-wrapper {
   flex: 1;
+  position: relative;
+}
+
+.location-text-input {
+  width: 100%;
   padding: 0.75rem 1rem;
   font-size: 1rem;
   color: white;
@@ -33,7 +38,7 @@
 }
 
 .location-text-input:focus {
-  border-color: rgba(99, 102, 241, 0.8);
+  border-color: #00BAF8;
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -45,15 +50,15 @@
   height: 48px;
   padding: 0;
   color: white;
-  background: rgba(99, 102, 241, 0.6);
-  border: 1px solid rgba(99, 102, 241, 0.8);
+  background: #0047AB;
+  border: 1px solid #00BAF8;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
 }
 
 .location-button:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.8);
+  background: #00BAF8;
 }
 
 .location-button:active:not(:disabled) {
@@ -90,4 +95,58 @@
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.6);
   margin: 0;
+}
+
+/* Suggestions dropdown */
+.location-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  background: #0f2035;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.location-suggestion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+
+.location-suggestion:last-child {
+  border-bottom: none;
+}
+
+.location-suggestion:hover {
+  background: rgba(0, 186, 248, 0.1);
+}
+
+.suggestion-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: white;
+}
+
+.suggestion-detail {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }

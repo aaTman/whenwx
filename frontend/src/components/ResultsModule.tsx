@@ -32,6 +32,24 @@ export function ResultsModule({ result }: ResultsModuleProps) {
     return `${days} day${days > 1 ? 's' : ''} ${remainingHours} hr${remainingHours > 1 ? 's' : ''}`;
   };
 
+  // Check if the event is happening now (first breach time is at or before current time)
+  const isHappeningNow = (): boolean => {
+    if (!timing.firstBreachTime) return false;
+    const breachDate = new Date(timing.firstBreachTime);
+    return breachDate <= new Date();
+  };
+
+  // Calculate end time based on first breach + duration
+  const getEndTime = (): string | null => {
+    if (!timing.firstBreachTime || timing.durationHours === null) return null;
+    const startDate = new Date(timing.firstBreachTime);
+    const endDate = new Date(startDate.getTime() + timing.durationHours * 60 * 60 * 1000);
+    return endDate.toISOString();
+  };
+
+  const happeningNow = isHappeningNow();
+  const endTime = getEndTime();
+
   const getConsistencyLevel = (consistency: number): { label: string; className: string } => {
     if (consistency >= 0.8) return { label: 'High', className: 'high' };
     if (consistency >= 0.5) return { label: 'Medium', className: 'medium' };
@@ -54,7 +72,7 @@ export function ResultsModule({ result }: ResultsModuleProps) {
 
       <div className="results-grid">
         {/* First Breach Card */}
-        <div className="result-card primary">
+        <div className={`result-card ${happeningNow ? 'happening-now' : 'primary'}`}>
           <div className="card-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -63,9 +81,11 @@ export function ResultsModule({ result }: ResultsModuleProps) {
           </div>
           <h3 className="card-label">First Occurrence</h3>
           <p className="card-value">
-            {timing.firstBreachTime
-              ? formatDateTime(timing.firstBreachTime)
-              : 'Not expected'}
+            {happeningNow
+              ? 'Happening Now'
+              : timing.firstBreachTime
+                ? formatDateTime(timing.firstBreachTime)
+                : 'Not expected'}
           </p>
         </div>
 
@@ -85,6 +105,9 @@ export function ResultsModule({ result }: ResultsModuleProps) {
           </div>
           <h3 className="card-label">Duration</h3>
           <p className="card-value">{formatDuration(timing.durationHours)}</p>
+          {endTime && (
+            <p className="card-subvalue">Ends {formatDateTime(endTime)}</p>
+          )}
         </div>
 
         {/* Model Consistency Card */}
