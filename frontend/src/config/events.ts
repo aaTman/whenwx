@@ -11,7 +11,7 @@ import type { WeatherEvent } from '../types/weather';
 export const WEATHER_EVENTS: WeatherEvent[] = [
   {
     id: 'freezing',
-    name: 'Freezing Temperatures',
+    name: 'Cold Snap (below -10°C)',
     description: 'Temperature drops below -10°C',
     variable: '2t',
     threshold: 263.15,      // -10°C in Kelvin

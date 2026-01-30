@@ -199,6 +199,17 @@
   font-style: italic;
 }
 
+.data-source a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.data-source a:hover {
+  color: #00BAF8;
+  text-decoration: underline;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .results-module {

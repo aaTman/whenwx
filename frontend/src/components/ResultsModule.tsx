@@ -149,7 +149,9 @@ export function ResultsModule({ result }: ResultsModuleProps) {
         <p>
           Forecast initialized: {new Date(forecastInitTime).toLocaleString()}
         </p>
-        <p className="data-source">Source: ECMWF IFS 15-day forecast</p>
+        <p className="data-source">
+          Powered by <a href="https://www.brightband.com/" target="_blank" rel="noopener noreferrer">Brightband's</a> ECMWF IFS forecast via <a href="https://earthmover.io/" target="_blank" rel="noopener noreferrer">Earthmover</a>
+        </p>
       </footer>
     </div>
   );
