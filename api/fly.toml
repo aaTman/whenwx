@@ -12,7 +12,8 @@ primary_region = 'iad'
 [env]
   CORS_ORIGINS = '*'
   RATE_LIMIT = '1/minute'
-  DEMO_MODE = 'true'
+  GCS_BUCKET = 'whenwx-data'
+  GCS_PREFIX = 'output'
 
 [http_service]
   internal_port = 8080
