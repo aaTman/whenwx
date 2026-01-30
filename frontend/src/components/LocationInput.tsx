@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGeolocation } from '../hooks/useGeolocation';
-import { useGeocoding, GeocodingResult } from '../hooks/useGeocoding';
+import { useGeocoding, type GeocodingResult } from '../hooks/useGeocoding';
 import type { Location } from '../types/weather';
 import './LocationInput.css';
 
@@ -12,7 +12,7 @@ interface LocationInputProps {
 export function LocationInput({ value, onChange }: LocationInputProps) {
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
