@@ -157,22 +157,31 @@ class WeatherQueryPlugin(Plugin):
                     time_val = time_val.item()
                 forecast_init_time = pd.Timestamp(time_val)
 
-            # Handle timedelta values (step coordinate is a timedelta from forecast start)
+            # Handle first_breach - can be timedelta64 (legacy) or float64 hours (new format)
             first_breach_str = None
             if first_breach is not None:
-                # Check for NaT - timedelta64 NaT is a special value
+                # Extract scalar if needed
+                if hasattr(first_breach, 'item'):
+                    first_breach = first_breach.item()
+
                 if isinstance(first_breach, np.timedelta64):
+                    # Legacy format: timedelta64
                     if not np.isnat(first_breach):
-                        # first_breach is a timedelta from forecast init
                         td = pd.Timedelta(first_breach)
                         if forecast_init_time:
                             first_breach_dt = forecast_init_time + td
                             first_breach_str = first_breach_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
                         else:
-                            # Fallback: show as hours from now
                             first_breach_str = f"+{td.total_seconds() / 3600:.0f}h"
-                elif not np.isnat(first_breach):
-                    first_breach_str = str(first_breach)[:19] + 'Z'
+                elif isinstance(first_breach, (int, float, np.floating, np.integer)):
+                    # New format: hours as float64, NaN means never
+                    try:
+                        hours = float(first_breach)
+                        if not np.isnan(hours) and forecast_init_time:
+                            first_breach_dt = forecast_init_time + pd.Timedelta(hours=hours)
+                            first_breach_str = first_breach_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+                    except (ValueError, TypeError):
+                        pass
 
             duration_val = None
             if duration is not None:

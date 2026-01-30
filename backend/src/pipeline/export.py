@@ -8,10 +8,49 @@ from datetime import datetime
 from typing import Dict, Optional
 import logging
 
+import numpy as np
 import xarray as xr
 import zarr
 
 logger = logging.getLogger(__name__)
+
+
+def _prepare_dataset_for_zarr(ds: xr.Dataset) -> xr.Dataset:
+    """
+    Prepare dataset for zarr export, handling NaT values properly.
+
+    Converts timedelta64 arrays with NaT to float64 with NaN,
+    since zarr doesn't handle timedelta64 NaT well (uses fill_value=0).
+    """
+    ds = ds.copy()
+
+    for var_name in list(ds.data_vars):
+        arr = ds[var_name]
+
+        # Check if it's a timedelta type
+        if np.issubdtype(arr.dtype, np.timedelta64):
+            # Convert to float64 (hours for first_breach_time, keep as-is for duration)
+            if 'first_breach' in var_name:
+                # Convert timedelta to hours as float, NaT becomes NaN
+                values = arr.values
+                # timedelta64 to float seconds, then to hours
+                float_values = values.astype('timedelta64[s]').astype(float) / 3600.0
+                # NaT in timedelta64 becomes a very large negative number when cast to float
+                # Replace those with NaN
+                float_values = np.where(
+                    np.isnat(values) | (float_values < -1e15),
+                    np.nan,
+                    float_values
+                )
+                ds[var_name] = xr.DataArray(
+                    float_values,
+                    dims=arr.dims,
+                    coords=arr.coords,
+                    attrs={**arr.attrs, 'units': 'hours since forecast_reference_time'}
+                )
+                logger.info(f"Converted {var_name} from timedelta64 to float64 hours")
+
+    return ds
 
 
 def export_to_local(
@@ -35,6 +74,9 @@ def export_to_local(
     logger.info(f"Exporting dataset to {path}")
     logger.info(f"Dataset variables: {list(ds.data_vars)}")
     logger.info(f"Target chunk spec: {chunk_spec}")
+
+    # Prepare dataset for zarr (handle NaT values)
+    ds = _prepare_dataset_for_zarr(ds)
 
     # Clean up existing output
     if os.path.exists(path):
@@ -113,6 +155,9 @@ class GCSExporter:
         from dask.diagnostics import ProgressBar
 
         logger.info(f"Exporting dataset to {self.output_path}")
+
+        # Prepare dataset for zarr (handle NaT values)
+        ds = _prepare_dataset_for_zarr(ds)
 
         ds.attrs['processing_time'] = datetime.now().isoformat()
         ds.attrs['output_path'] = self.output_path
