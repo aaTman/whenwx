@@ -65,9 +65,17 @@ export function Home() {
 
         <footer className="home-footer">
           <p>
-            Powered by ECMWF IFS 15-day forecast via{' '}
+            Powered by{' '}
             <a
-              href="https://earthmover.io"
+              href="https://www.brightband.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Brightband's
+            </a>{' '}
+            ECMWF IFS forecast via{' '}
+            <a
+              href="https://earthmover.io/"
               target="_blank"
               rel="noopener noreferrer"
             >
