@@ -176,13 +176,23 @@ class WeatherQueryPlugin(Plugin):
 
             duration_val = None
             if duration is not None:
+                # Extract scalar value if needed
+                if hasattr(duration, 'item'):
+                    duration = duration.item()
+
                 # Handle timedelta duration
                 if isinstance(duration, np.timedelta64):
                     if not np.isnat(duration):
                         td = pd.Timedelta(duration)
                         duration_val = td.total_seconds() / 3600  # Convert to hours
-                elif not np.isnan(duration):
-                    duration_val = float(duration)
+                else:
+                    # Handle numeric values (float, int, numpy scalar)
+                    try:
+                        duration_float = float(duration)
+                        if not np.isnan(duration_float):
+                            duration_val = duration_float
+                    except (ValueError, TypeError):
+                        pass
 
             # Get actual coordinates used
             actual_lat = float(point_data.latitude.values)
