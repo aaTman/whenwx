@@ -6,8 +6,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
+# Copy source code and entrypoint
 COPY src/ ./src/
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
@@ -21,5 +23,5 @@ ENV API_PORT=8080
 
 EXPOSE 8080
 
-# Run the API
-CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Run the API via entrypoint script
+CMD ["./entrypoint.sh"]
