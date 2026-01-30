@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { WeatherQueryResult, QueryParams } from '../types/weather';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 interface UseWeatherQueryReturn {
   data: WeatherQueryResult | null;

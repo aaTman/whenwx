@@ -96,21 +96,22 @@ class WeatherProcessor(ABC):
         self,
         mask: xr.DataArray,
         time_dim: str = 'time',
-        timestep_hours: float = 3.0
+        timestep_hours: float = 1.0
     ) -> xr.DataArray:
         """
-        Compute how long the condition persists after first breach.
+        Compute total hours where condition is met after first breach.
 
-        Counts consecutive timesteps where condition is True starting
-        from the first breach.
+        Note: This counts ALL timesteps where the condition is True after
+        the first breach, not just consecutive ones. If the temperature
+        oscillates above/below the threshold, all "below" times are counted.
 
         Args:
             mask: Boolean DataArray indicating where condition is met
             time_dim: Name of the time dimension
-            timestep_hours: Hours between timesteps (default 3 for ECMWF IFS)
+            timestep_hours: Hours between timesteps (default 1 for ECMWF IFS hourly data)
 
         Returns:
-            DataArray with duration in hours
+            DataArray with total duration in hours
         """
         # Get the index of first True for each location
         first_idx = mask.argmax(dim=time_dim)
@@ -130,8 +131,6 @@ class WeatherProcessor(ABC):
         condition_after = mask & after_first
 
         # Count total hours where condition is met after first breach
-        # This counts all True values, not just consecutive ones
-        # For a more accurate consecutive count, we'd need more complex logic
         duration_steps = condition_after.sum(dim=time_dim)
         duration_hours = duration_steps.astype(float) * timestep_hours
 
@@ -156,7 +155,7 @@ class WeatherProcessor(ABC):
         Returns:
             Dataset with computed metrics:
             - first_breach_time: datetime of first occurrence
-            - duration_hours: how long condition persists
+            - duration_hours: total hours condition is met after first breach
         """
         if self.variable not in ds:
             raise ValueError(f"Variable '{self.variable}' not found in dataset")
@@ -164,8 +163,20 @@ class WeatherProcessor(ABC):
         data = ds[self.variable]
         mask = self.compute_mask(data)
 
+        # Auto-detect timestep from coordinate
+        timestep_hours = 1.0  # default
+        if time_dim in ds.coords and len(ds[time_dim]) > 1:
+            step_values = ds[time_dim].values
+            interval = step_values[1] - step_values[0]
+            # Convert to hours (handle both timedelta64 and numeric)
+            if np.issubdtype(type(interval), np.timedelta64):
+                timestep_hours = float(interval / np.timedelta64(1, 'h'))
+            else:
+                # Assume seconds if numeric
+                timestep_hours = float(interval) / 3600.0
+
         first_breach = self.compute_first_breach(mask, time_dim)
-        duration = self.compute_duration(mask, time_dim)
+        duration = self.compute_duration(mask, time_dim, timestep_hours=timestep_hours)
 
         # Build output dataset
         result = xr.Dataset({

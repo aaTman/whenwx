@@ -35,7 +35,11 @@ class APIConfig:
 
     @property
     def zarr_path(self) -> str:
-        """Full GCS path to zarr data."""
+        """Path to zarr data (local or GCS)."""
+        # Check for explicit DATA_PATH env var first (for local testing)
+        data_path = os.getenv('DATA_PATH')
+        if data_path:
+            return data_path
         return f'gs://{self.gcs_bucket}/{self.gcs_prefix}'
 
 

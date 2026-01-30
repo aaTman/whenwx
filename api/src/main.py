@@ -205,7 +205,7 @@ if __name__ == '__main__':
 
     config = get_config()
     uvicorn.run(
-        "api.src.main:app",
+        "src.main:app",
         host=config.host,
         port=config.port,
         reload=config.debug,

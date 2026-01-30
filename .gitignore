@@ -38,3 +38,7 @@ coverage/
 *.pem
 *.key
 credentials.json
+
+# Data files
+*.zarr/
+output.zarr/

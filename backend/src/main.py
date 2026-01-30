@@ -3,7 +3,7 @@ Main entry point for the WhenWX backend processing pipeline.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from .config import get_config, WEATHER_EVENTS
@@ -64,7 +64,9 @@ def process_forecast(use_mock: bool = False, local_output: Optional[str] = None)
             continue
 
         try:
-            metrics = processor.compute_metrics(ds)
+            # Use 'step' dimension for ECMWF IFS data (forecast lead time)
+            time_dim = 'step' if 'step' in ds.dims else 'time'
+            metrics = processor.compute_metrics(ds, time_dim=time_dim)
             results[event_config.event_id] = metrics
             logger.info(f"Computed metrics for {event_config.event_id}")
         except Exception as e:
@@ -89,7 +91,7 @@ def process_forecast(use_mock: bool = False, local_output: Optional[str] = None)
         'title': 'WhenWX Processed Weather Event Data',
         'source': 'ECMWF IFS 15-day forecast via Earthmover Arraylake',
         'institution': 'WhenWX',
-        'processing_time': datetime.utcnow().isoformat(),
+        'processing_time': datetime.now(timezone.utc).isoformat(),
         'events_processed': list(results.keys()),
     }
 

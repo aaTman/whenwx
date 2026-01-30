@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 import xarray as xr
 import numpy as np
+import pandas as pd
 
 from xpublish import Dependencies, Plugin, hookimpl
 
@@ -148,25 +149,52 @@ class WeatherQueryPlugin(Plugin):
             first_breach = point_data[first_breach_var].values
             duration = point_data[duration_var].values if duration_var in point_data else None
 
-            # Handle NaT/NaN values
+            # Get forecast init time from dataset
+            forecast_init_time = None
+            if 'time' in dataset.coords:
+                time_val = dataset.coords['time'].values
+                if hasattr(time_val, 'item'):
+                    time_val = time_val.item()
+                forecast_init_time = pd.Timestamp(time_val)
+
+            # Handle timedelta values (step coordinate is a timedelta from forecast start)
             first_breach_str = None
-            if not np.isnat(first_breach):
-                # Convert numpy datetime64 to Python datetime string
-                first_breach_dt = np.datetime64(first_breach, 'ns')
-                first_breach_str = str(first_breach_dt)[:19] + 'Z'
+            if first_breach is not None:
+                # Check for NaT - timedelta64 NaT is a special value
+                if isinstance(first_breach, np.timedelta64):
+                    if not np.isnat(first_breach):
+                        # first_breach is a timedelta from forecast init
+                        td = pd.Timedelta(first_breach)
+                        if forecast_init_time:
+                            first_breach_dt = forecast_init_time + td
+                            first_breach_str = first_breach_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+                        else:
+                            # Fallback: show as hours from now
+                            first_breach_str = f"+{td.total_seconds() / 3600:.0f}h"
+                elif not np.isnat(first_breach):
+                    first_breach_str = str(first_breach)[:19] + 'Z'
 
             duration_val = None
-            if duration is not None and not np.isnan(duration):
-                duration_val = float(duration)
+            if duration is not None:
+                # Handle timedelta duration
+                if isinstance(duration, np.timedelta64):
+                    if not np.isnat(duration):
+                        td = pd.Timedelta(duration)
+                        duration_val = td.total_seconds() / 3600  # Convert to hours
+                elif not np.isnan(duration):
+                    duration_val = float(duration)
 
             # Get actual coordinates used
             actual_lat = float(point_data.latitude.values)
             actual_lon = float(point_data.longitude.values)
 
-            # Get forecast init time from dataset attributes
-            forecast_init = dataset.attrs.get('forecast_init_time', '')
-            if not forecast_init:
-                forecast_init = dataset.attrs.get('processing_time', datetime.utcnow().isoformat())
+            # Get forecast init time from dataset
+            if forecast_init_time:
+                forecast_init = forecast_init_time.isoformat() + 'Z'
+            else:
+                forecast_init = dataset.attrs.get('forecast_init_time', '')
+                if not forecast_init:
+                    forecast_init = dataset.attrs.get('processing_time', datetime.utcnow().isoformat())
 
             return WeatherQueryResponse(
                 location=Location(

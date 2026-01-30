@@ -11,8 +11,8 @@ primary_region = 'iad'
 
 [env]
   CORS_ORIGINS = '*'
-  DEMO_MODE = 'true'
   RATE_LIMIT = '1/minute'
+  DEMO_MODE = 'true'
 
 [http_service]
   internal_port = 8080

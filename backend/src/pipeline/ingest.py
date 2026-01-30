@@ -55,11 +55,14 @@ class ArraylakeDataFetcher:
         """
         Fetch the most recent forecast data.
 
+        Selects the latest model initialization time and returns
+        the forecast data across the step dimension.
+
         Args:
             branch: Repository branch to read from
 
         Returns:
-            xarray Dataset with forecast data
+            xarray Dataset with forecast data (dims: step, latitude, longitude)
         """
         logger.info(f"Fetching latest forecast from {self.org}/{self.repo}")
 
@@ -73,6 +76,13 @@ class ArraylakeDataFetcher:
         )
 
         logger.info(f"Loaded dataset with variables: {list(ds.data_vars)}")
+
+        # Select the latest model initialization time
+        if 'time' in ds.dims:
+            latest_time = ds.time.max().values
+            logger.info(f"Selecting latest model run: {latest_time}")
+            ds = ds.sel(time=latest_time)
+
         return ds
 
     def get_latest_commit_time(self, branch: str = 'main') -> datetime:

@@ -51,11 +51,12 @@ class Config:
 
     def __post_init__(self):
         # Chunking optimized for point queries
-        # Each point's full time series is in a single chunk
+        # All timesteps together, small spatial chunks
+        # 10x10 = ~10k chunks (721/10 * 1440/10 = ~10k) vs 1M with 1x1
         self.chunk_spec = {
             'step': -1,  # All timesteps together
-            'latitude': 1,
-            'longitude': 1,
+            'latitude': 10,
+            'longitude': 10,
         }
 
     @property
