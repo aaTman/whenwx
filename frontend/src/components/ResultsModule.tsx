@@ -147,7 +147,7 @@ export function ResultsModule({ result }: ResultsModuleProps) {
 
       <footer className="results-footer">
         <p>
-          Forecast initialized: {new Date(forecastInitTime).toLocaleString()}
+          Forecast initialized: {new Date(forecastInitTime).toLocaleString('en-US', { timeZone: 'UTC', dateStyle: 'medium', timeStyle: 'short' })} UTC
         </p>
         <p className="data-source">
           Powered by <a href="https://www.brightband.com/" target="_blank" rel="noopener noreferrer">Brightband's</a> ECMWF IFS forecast via <a href="https://earthmover.io/" target="_blank" rel="noopener noreferrer">Earthmover</a>
