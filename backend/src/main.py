@@ -116,6 +116,26 @@ def process_forecast(use_mock: bool = False, local_output: Optional[str] = None)
     return output_path
 
 
+def save_processed_timestamp():
+    """Save the current timestamp to GCS to track last successful processing."""
+    import json
+    import os
+    try:
+        from google.cloud import storage
+
+        bucket_name = os.getenv('GCS_BUCKET', 'whenwx-forecast-data')
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob('last_processed.json')
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        data = {'timestamp': timestamp}
+        blob.upload_from_string(json.dumps(data), content_type='application/json')
+        logger.info(f"Saved processed timestamp: {timestamp}")
+    except Exception as e:
+        logger.warning(f"Could not save processed timestamp: {e}")
+
+
 # Need this import at module level for the merged dataset
 import xarray as xr
 
@@ -129,4 +149,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    process_forecast(use_mock=args.mock, local_output=args.local)
+    result = process_forecast(use_mock=args.mock, local_output=args.local)
+
+    # Save timestamp on successful processing (only for non-local runs)
+    if result and not args.local:
+        save_processed_timestamp()

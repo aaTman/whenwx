@@ -3,8 +3,8 @@ name: Process Forecast
 
 on:
   schedule:
-    # Run every 6 hours, aligned with ECMWF forecast cycles
-    - cron: '30 6,12,18,0 * * *'
+    # Run every 30 minutes to check for new data
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       use_mock:
@@ -12,9 +12,14 @@ on:
         required: false
         default: 'false'
         type: boolean
+      force:
+        description: 'Force processing even if no new data'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
-  process:
+  check-and-process:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,11 +45,31 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
+      - name: Check for new data
+        id: check
+        if: github.event.inputs.force != 'true' && github.event.inputs.use_mock != 'true'
+        run: |
+          OUTPUT=$(uv run python -m src.check_new_data 2>&1) || true
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "NEW_DATA=true"; then
+            echo "new_data=true" >> $GITHUB_OUTPUT
+          else
+            echo "new_data=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          ARRAYLAKE_TOKEN: ${{ secrets.ARRAYLAKE_TOKEN }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET || 'whenwx-forecast-data' }}
+
+      - name: Skip processing (no new data)
+        if: steps.check.outputs.new_data == 'false' && github.event.inputs.force != 'true' && github.event.inputs.use_mock != 'true'
+        run: echo "No new data available - skipping processing"
+
       - name: Process forecast
+        if: steps.check.outputs.new_data == 'true' || github.event.inputs.force == 'true' || github.event.inputs.use_mock == 'true'
         run: |
           uv run python -m src.main ${{ github.event.inputs.use_mock == 'true' && '--mock' || '' }}
         env:
           ARRAYLAKE_TOKEN: ${{ secrets.ARRAYLAKE_TOKEN }}
-          GCS_BUCKET: ${{ vars.GCS_BUCKET || 'whenwx-data' }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET || 'whenwx-forecast-data' }}
           GCS_OUTPUT_PREFIX: ${{ vars.GCS_OUTPUT_PREFIX || 'output' }}
           GOOGLE_CLOUD_PROJECT: ${{ vars.GCP_PROJECT }}
