@@ -50,6 +50,17 @@ export function ResultsModule({ result }: ResultsModuleProps) {
   const happeningNow = isHappeningNow();
   const endTime = getEndTime();
 
+  // Calculate time remaining if happening now
+  const getTimeRemaining = (): number | null => {
+    if (!happeningNow || !endTime) return null;
+    const now = new Date();
+    const end = new Date(endTime);
+    const hoursRemaining = (end.getTime() - now.getTime()) / (1000 * 60 * 60);
+    return hoursRemaining > 0 ? hoursRemaining : 0;
+  };
+
+  const timeRemaining = getTimeRemaining();
+
   const getConsistencyLevel = (consistency: number): { label: string; className: string } => {
     if (consistency >= 0.8) return { label: 'High', className: 'high' };
     if (consistency >= 0.5) return { label: 'Medium', className: 'medium' };
@@ -103,8 +114,12 @@ export function ResultsModule({ result }: ResultsModuleProps) {
               <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
             </svg>
           </div>
-          <h3 className="card-label">Duration</h3>
-          <p className="card-value">{formatDuration(timing.durationHours)}</p>
+          <h3 className="card-label">{happeningNow ? 'Time Remaining' : 'Duration'}</h3>
+          <p className="card-value">
+            {happeningNow && timeRemaining !== null
+              ? formatDuration(timeRemaining)
+              : formatDuration(timing.durationHours)}
+          </p>
           {endTime && (
             <p className="card-subvalue">Ends {formatDateTime(endTime)}</p>
           )}

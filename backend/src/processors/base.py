@@ -99,11 +99,10 @@ class WeatherProcessor(ABC):
         timestep_hours: float = 1.0
     ) -> xr.DataArray:
         """
-        Compute total hours where condition is met after first breach.
+        Compute hours from first breach until condition ends.
 
-        Note: This counts ALL timesteps where the condition is True after
-        the first breach, not just consecutive ones. If the temperature
-        oscillates above/below the threshold, all "below" times are counted.
+        Returns the duration of the contiguous event starting at first breach,
+        ending when the condition is no longer met (or end of forecast).
 
         Args:
             mask: Boolean DataArray indicating where condition is met
@@ -111,7 +110,7 @@ class WeatherProcessor(ABC):
             timestep_hours: Hours between timesteps (default 1 for ECMWF IFS hourly data)
 
         Returns:
-            DataArray with total duration in hours
+            DataArray with contiguous duration in hours
         """
         # Get the index of first True for each location
         first_idx = mask.argmax(dim=time_dim)
@@ -124,14 +123,20 @@ class WeatherProcessor(ABC):
             coords={time_dim: mask[time_dim]}
         )
 
-        # Mask for "at or after first breach"
-        after_first = time_indices >= first_idx
+        # Find first False AFTER first True (end of contiguous event)
+        not_mask = ~mask
+        after_first = time_indices > first_idx
+        not_mask_after = not_mask & after_first
 
-        # Condition must be True AND after first breach
-        condition_after = mask & after_first
+        # Find where condition ends (first timestep after first_idx where condition is False)
+        ever_ends = not_mask_after.any(dim=time_dim)
+        end_idx = not_mask_after.argmax(dim=time_dim)
 
-        # Count total hours where condition is met after first breach
-        duration_steps = condition_after.sum(dim=time_dim)
+        # If condition never ends (stays True to end of forecast), use n_times
+        end_idx = xr.where(ever_ends, end_idx, n_times)
+
+        # Duration = end - start (in timesteps)
+        duration_steps = end_idx - first_idx
         duration_hours = duration_steps.astype(float) * timestep_hours
 
         # Set to NaN where condition is never met
