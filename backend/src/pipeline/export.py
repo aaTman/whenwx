@@ -29,26 +29,24 @@ def _prepare_dataset_for_zarr(ds: xr.Dataset) -> xr.Dataset:
 
         # Check if it's a timedelta type
         if np.issubdtype(arr.dtype, np.timedelta64):
-            # Convert to float64 (hours for first_breach_time, keep as-is for duration)
-            if 'first_breach' in var_name:
-                # Convert timedelta to hours as float, NaT becomes NaN
-                values = arr.values
-                # timedelta64 to float seconds, then to hours
-                float_values = values.astype('timedelta64[s]').astype(float) / 3600.0
-                # NaT in timedelta64 becomes a very large negative number when cast to float
-                # Replace those with NaN
-                float_values = np.where(
-                    np.isnat(values) | (float_values < -1e15),
-                    np.nan,
-                    float_values
-                )
-                ds[var_name] = xr.DataArray(
-                    float_values,
-                    dims=arr.dims,
-                    coords=arr.coords,
-                    attrs={**arr.attrs, 'units': 'hours since forecast_reference_time'}
-                )
-                logger.info(f"Converted {var_name} from timedelta64 to float64 hours")
+            # Convert timedelta to hours as float, NaT becomes NaN
+            values = arr.values
+            # timedelta64 to float seconds, then to hours
+            float_values = values.astype('timedelta64[s]').astype(float) / 3600.0
+            # NaT in timedelta64 becomes a very large negative number when cast to float
+            # Replace those with NaN
+            float_values = np.where(
+                np.isnat(values) | (float_values < -1e15),
+                np.nan,
+                float_values
+            )
+            ds[var_name] = xr.DataArray(
+                float_values,
+                dims=arr.dims,
+                coords=arr.coords,
+                attrs={**arr.attrs, 'units': 'hours'}
+            )
+            logger.info(f"Converted {var_name} from timedelta64 to float64 hours")
 
     return ds
 
