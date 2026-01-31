@@ -98,12 +98,14 @@ class ArraylakeDataFetcher:
             Datetime of the latest commit
         """
         repo = self._get_repo()
-        commits = repo.log(branch, limit=1)
+        # Use ancestry() instead of log() - returns iterator of SnapshotInfo
+        commits = list(repo.ancestry(branch=branch))
 
         if not commits:
             raise ValueError(f"No commits found on branch {branch}")
 
-        return commits[0].timestamp
+        # SnapshotInfo has 'written_at' field, not 'timestamp'
+        return commits[0].written_at
 
     def detect_new_data(
         self,

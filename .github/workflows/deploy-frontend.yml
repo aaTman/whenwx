@@ -8,6 +8,15 @@ on:
       - 'frontend/**'
       - '.github/workflows/deploy-frontend.yml'
   workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'Deployment target'
+        required: false
+        default: 'github-pages'
+        type: choice
+        options:
+          - github-pages
+          - custom-domain
 
 permissions:
   contents: read
@@ -43,6 +52,7 @@ jobs:
         run: npm run build
         env:
           VITE_API_URL: ${{ vars.API_URL || 'https://whenwx-api.fly.dev' }}
+          VITE_BASE_URL: ${{ github.event.inputs.deploy_target == 'custom-domain' && '/' || '/whenwx/' }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
