@@ -2,6 +2,46 @@ import { useState, useEffect } from 'react';
 import type { WeatherQueryResult, QueryParams } from '../types/weather';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const CACHE_KEY_PREFIX = 'whenwx_query_';
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+interface CachedResult {
+  data: WeatherQueryResult;
+  timestamp: number;
+}
+
+function getCacheKey(params: QueryParams): string {
+  return `${CACHE_KEY_PREFIX}${params.lat}_${params.lon}_${params.eventId}`;
+}
+
+function getCachedData(params: QueryParams): WeatherQueryResult | null {
+  try {
+    const key = getCacheKey(params);
+    const cached = sessionStorage.getItem(key);
+    if (!cached) return null;
+
+    const { data, timestamp }: CachedResult = JSON.parse(cached);
+    // Check if cache is still valid
+    if (Date.now() - timestamp < CACHE_TTL_MS) {
+      return data;
+    }
+    // Cache expired, remove it
+    sessionStorage.removeItem(key);
+  } catch {
+    // Invalid cache data
+  }
+  return null;
+}
+
+function setCachedData(params: QueryParams, data: WeatherQueryResult): void {
+  try {
+    const key = getCacheKey(params);
+    const cached: CachedResult = { data, timestamp: Date.now() };
+    sessionStorage.setItem(key, JSON.stringify(cached));
+  } catch {
+    // Storage full or unavailable
+  }
+}
 
 interface UseWeatherQueryReturn {
   data: WeatherQueryResult | null;
@@ -11,7 +51,10 @@ interface UseWeatherQueryReturn {
 }
 
 export function useWeatherQuery(params: QueryParams | null): UseWeatherQueryReturn {
-  const [data, setData] = useState<WeatherQueryResult | null>(null);
+  const [data, setData] = useState<WeatherQueryResult | null>(() => {
+    // Initialize with cached data if available
+    return params ? getCachedData(params) : null;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fetchTrigger, setFetchTrigger] = useState(0);
@@ -21,6 +64,14 @@ export function useWeatherQuery(params: QueryParams | null): UseWeatherQueryRetu
       setData(null);
       setLoading(false);
       setError(null);
+      return;
+    }
+
+    // Check cache first
+    const cached = getCachedData(params);
+    if (cached && fetchTrigger === 0) {
+      // Use cached data, skip fetch
+      setData(cached);
       return;
     }
 
@@ -56,6 +107,8 @@ export function useWeatherQuery(params: QueryParams | null): UseWeatherQueryRetu
 
         const result = await response.json();
         setData(result);
+        // Cache the successful result
+        setCachedData(params, result);
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
           return;
