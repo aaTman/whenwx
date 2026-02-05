@@ -12,11 +12,11 @@ on:
       deploy_target:
         description: 'Deployment target'
         required: false
-        default: 'github-pages'
+        default: 'custom-domain'
         type: choice
         options:
-          - github-pages
           - custom-domain
+          - github-pages
 
 permissions:
   contents: read
@@ -52,7 +52,8 @@ jobs:
         run: npm run build
         env:
           VITE_API_URL: ${{ vars.API_URL || 'https://whenwx-api.fly.dev' }}
-          VITE_BASE_URL: ${{ github.event.inputs.deploy_target == 'custom-domain' && '/' || '/whenwx/' }}
+          # Use '/' for custom domain (default), '/whenwx/' only when explicitly selecting github-pages
+          VITE_BASE_URL: ${{ github.event.inputs.deploy_target == 'github-pages' && '/whenwx/' || '/' }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
