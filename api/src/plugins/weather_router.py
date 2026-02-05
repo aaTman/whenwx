@@ -70,7 +70,7 @@ EVENTS = {
         threshold=263.15,
         thresholdDisplay=-10,
         operator='lt',
-        unit='K'
+        unit='°C'
     ),
 }
 
