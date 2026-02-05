@@ -95,6 +95,8 @@ export function Results() {
               timing: {
                 firstBreachTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
                 durationHours: 18,
+                nextBreachTime: null,
+                nextDurationHours: null,
                 modelConsistency: 0.75,
                 confidenceBand: {
                   earliest: new Date(Date.now() + 2.5 * 24 * 60 * 60 * 1000).toISOString(),

@@ -32,23 +32,71 @@ export function ResultsModule({ result }: ResultsModuleProps) {
     return `${days} day${days > 1 ? 's' : ''} ${remainingHours} hr${remainingHours > 1 ? 's' : ''}`;
   };
 
-  // Check if the event is happening now (first breach time is at or before current time)
-  const isHappeningNow = (): boolean => {
-    if (!timing.firstBreachTime) return false;
-    const breachDate = new Date(timing.firstBreachTime);
-    return breachDate <= new Date();
-  };
-
-  // Calculate end time based on first breach + duration
-  const getEndTime = (): string | null => {
-    if (!timing.firstBreachTime || timing.durationHours === null) return null;
-    const startDate = new Date(timing.firstBreachTime);
-    const endDate = new Date(startDate.getTime() + timing.durationHours * 60 * 60 * 1000);
+  // Calculate end time for a given breach time and duration
+  const calculateEndTime = (breachTime: string | null, duration: number | null): string | null => {
+    if (!breachTime || duration === null) return null;
+    const startDate = new Date(breachTime);
+    const endDate = new Date(startDate.getTime() + duration * 60 * 60 * 1000);
     return endDate.toISOString();
   };
 
+  // Determine which occurrence to display (first or next)
+  const getActiveOccurrence = (): {
+    breachTime: string | null;
+    duration: number | null;
+    endTime: string | null;
+    isFirstOccurrence: boolean;
+    firstHasEnded: boolean;
+  } => {
+    const now = new Date();
+    const firstEndTime = calculateEndTime(timing.firstBreachTime, timing.durationHours);
+
+    // Check if first occurrence has ended
+    if (firstEndTime && new Date(firstEndTime) < now) {
+      // First occurrence has ended, show next if available
+      if (timing.nextBreachTime) {
+        const nextEndTime = calculateEndTime(timing.nextBreachTime, timing.nextDurationHours);
+        return {
+          breachTime: timing.nextBreachTime,
+          duration: timing.nextDurationHours,
+          endTime: nextEndTime,
+          isFirstOccurrence: false,
+          firstHasEnded: true,
+        };
+      }
+      // No next occurrence - return null values to show "Not expected"
+      return {
+        breachTime: null,
+        duration: null,
+        endTime: null,
+        isFirstOccurrence: false,
+        firstHasEnded: true,
+      };
+    }
+
+    // First occurrence is current or future
+    return {
+      breachTime: timing.firstBreachTime,
+      duration: timing.durationHours,
+      endTime: firstEndTime,
+      isFirstOccurrence: true,
+      firstHasEnded: false,
+    };
+  };
+
+  const activeOccurrence = getActiveOccurrence();
+
+  // Check if the event is happening now (breach time is at or before current time AND hasn't ended)
+  const isHappeningNow = (): boolean => {
+    if (!activeOccurrence.breachTime || !activeOccurrence.endTime) return false;
+    const breachDate = new Date(activeOccurrence.breachTime);
+    const endDate = new Date(activeOccurrence.endTime);
+    const now = new Date();
+    return breachDate <= now && endDate > now;
+  };
+
   const happeningNow = isHappeningNow();
-  const endTime = getEndTime();
+  const endTime = activeOccurrence.endTime;
 
   // Calculate time remaining if happening now
   const getTimeRemaining = (): number | null => {
@@ -82,7 +130,7 @@ export function ResultsModule({ result }: ResultsModuleProps) {
       </header>
 
       <div className="results-grid">
-        {/* First Breach Card */}
+        {/* Occurrence Card */}
         <div className={`result-card ${happeningNow ? 'happening-now' : 'primary'}`}>
           <div className="card-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -90,13 +138,17 @@ export function ResultsModule({ result }: ResultsModuleProps) {
               <polyline points="12 6 12 12 16 14" />
             </svg>
           </div>
-          <h3 className="card-label">First Occurrence</h3>
+          <h3 className="card-label">
+            {activeOccurrence.isFirstOccurrence ? 'First Occurrence' : 'Next Occurrence'}
+          </h3>
           <p className="card-value">
             {happeningNow
               ? 'Happening Now'
-              : timing.firstBreachTime
-                ? formatDateTime(timing.firstBreachTime)
-                : 'Not expected'}
+              : activeOccurrence.breachTime
+                ? formatDateTime(activeOccurrence.breachTime)
+                : activeOccurrence.firstHasEnded
+                  ? 'Not expected in remaining forecast'
+                  : 'Not expected'}
           </p>
         </div>
 
@@ -118,9 +170,9 @@ export function ResultsModule({ result }: ResultsModuleProps) {
           <p className="card-value">
             {happeningNow && timeRemaining !== null
               ? formatDuration(timeRemaining)
-              : formatDuration(timing.durationHours)}
+              : formatDuration(activeOccurrence.duration)}
           </p>
-          {endTime && (
+          {endTime && activeOccurrence.breachTime && (
             <p className="card-subvalue">Ends {formatDateTime(endTime)}</p>
           )}
         </div>

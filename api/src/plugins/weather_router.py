@@ -27,6 +27,8 @@ class EventTiming(BaseModel):
     """Timing information for a weather event."""
     firstBreachTime: Optional[str] = Field(None, description="ISO timestamp of first occurrence")
     durationHours: Optional[float] = Field(None, description="Duration in hours")
+    nextBreachTime: Optional[str] = Field(None, description="ISO timestamp of next occurrence after first ends")
+    nextDurationHours: Optional[float] = Field(None, description="Duration of next occurrence in hours")
     modelConsistency: float = Field(..., ge=0, le=1, description="Model confidence (0-1)")
     confidenceBand: ConfidenceBand
 
@@ -145,9 +147,15 @@ class WeatherQueryPlugin(Plugin):
                     detail=f"Failed to select location: {str(e)}"
                 )
 
+            # Build variable names for next occurrence
+            next_breach_var = f'{event_id}_next_breach_time'
+            next_duration_var = f'{event_id}_next_duration_hours'
+
             # Extract values
             first_breach = point_data[first_breach_var].values
             duration = point_data[duration_var].values if duration_var in point_data else None
+            next_breach = point_data[next_breach_var].values if next_breach_var in point_data else None
+            next_duration = point_data[next_duration_var].values if next_duration_var in point_data else None
 
             # Get forecast init time from dataset
             forecast_init_time = None
@@ -203,6 +211,53 @@ class WeatherQueryPlugin(Plugin):
                     except (ValueError, TypeError):
                         pass
 
+            # Handle next_breach - same logic as first_breach
+            next_breach_str = None
+            if next_breach is not None:
+                # Extract scalar if needed
+                if hasattr(next_breach, 'item'):
+                    next_breach = next_breach.item()
+
+                if isinstance(next_breach, np.timedelta64):
+                    # Legacy format: timedelta64
+                    if not np.isnat(next_breach):
+                        td = pd.Timedelta(next_breach)
+                        if forecast_init_time:
+                            next_breach_dt = forecast_init_time + td
+                            next_breach_str = next_breach_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+                        else:
+                            next_breach_str = f"+{td.total_seconds() / 3600:.0f}h"
+                elif isinstance(next_breach, (int, float, np.floating, np.integer)):
+                    # New format: hours as float64, NaN means never
+                    try:
+                        hours = float(next_breach)
+                        if not np.isnan(hours) and forecast_init_time:
+                            next_breach_dt = forecast_init_time + pd.Timedelta(hours=hours)
+                            next_breach_str = next_breach_dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+                    except (ValueError, TypeError):
+                        pass
+
+            # Handle next_duration
+            next_duration_val = None
+            if next_duration is not None:
+                # Extract scalar value if needed
+                if hasattr(next_duration, 'item'):
+                    next_duration = next_duration.item()
+
+                # Handle timedelta duration
+                if isinstance(next_duration, np.timedelta64):
+                    if not np.isnat(next_duration):
+                        td = pd.Timedelta(next_duration)
+                        next_duration_val = td.total_seconds() / 3600
+                else:
+                    # Handle numeric values (float, int, numpy scalar)
+                    try:
+                        next_duration_float = float(next_duration)
+                        if not np.isnan(next_duration_float):
+                            next_duration_val = next_duration_float
+                    except (ValueError, TypeError):
+                        pass
+
             # Get actual coordinates used
             actual_lat = float(point_data.latitude.values)
             actual_lon = float(point_data.longitude.values)
@@ -224,6 +279,8 @@ class WeatherQueryPlugin(Plugin):
                 timing=EventTiming(
                     firstBreachTime=first_breach_str,
                     durationHours=duration_val,
+                    nextBreachTime=next_breach_str,
+                    nextDurationHours=next_duration_val,
                     modelConsistency=0.75,  # TODO: Compute from multiple model runs
                     confidenceBand=ConfidenceBand(
                         earliest=None,  # TODO: Compute from ensemble

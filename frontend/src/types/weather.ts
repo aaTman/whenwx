@@ -27,6 +27,8 @@ export interface ConfidenceBand {
 export interface EventTiming {
   firstBreachTime: string | null;
   durationHours: number | null;
+  nextBreachTime: string | null;
+  nextDurationHours: number | null;
   modelConsistency: number;
   confidenceBand: ConfidenceBand;
 }
