@@ -204,7 +204,7 @@ class WeatherProcessor(ABC):
 
         result['duration_hours'].attrs = {
             'long_name': 'Duration of condition',
-            'units': 'hours',
+            'unit': 'hours',  # Use 'unit' (not 'units') to avoid xarray timedelta auto-decode
             'description': 'How long the condition persists after first breach',
         }
 

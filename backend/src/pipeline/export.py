@@ -40,11 +40,15 @@ def _prepare_dataset_for_zarr(ds: xr.Dataset) -> xr.Dataset:
                 np.nan,
                 float_values
             )
+            # Use 'unit' (not 'units') to avoid xarray's timedelta auto-decoding
+            # xarray looks for 'units' attribute to decode as timedelta
+            new_attrs = {k: v for k, v in arr.attrs.items() if k != 'units'}
+            new_attrs['unit'] = 'hours'  # singular 'unit' won't trigger decode
             ds[var_name] = xr.DataArray(
                 float_values,
                 dims=arr.dims,
                 coords=arr.coords,
-                attrs={**arr.attrs, 'units': 'hours'}
+                attrs=new_attrs
             )
             logger.info(f"Converted {var_name} from timedelta64 to float64 hours")
 
