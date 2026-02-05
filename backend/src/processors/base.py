@@ -169,14 +169,15 @@ class WeatherProcessor(ABC):
         n_times = mask.sizes[time_dim]
         time_coords = mask[time_dim]
 
-        # Create index array
+        # Create index array - broadcast to match mask dimensions
         time_indices = xr.DataArray(
             np.arange(n_times),
             dims=[time_dim],
             coords={time_dim: time_coords}
         )
 
-        # Only look at timesteps AFTER the first event ends
+        # Broadcast time_indices and first_end_idx for comparison
+        # This avoids dask indexing issues by doing element-wise comparison
         after_first_event = time_indices >= first_end_idx
 
         # Find where condition is True AFTER first event ends
@@ -185,15 +186,15 @@ class WeatherProcessor(ABC):
         # Check if there's any True after first event
         has_next = mask_after.any(dim=time_dim)
 
-        # Find index of next breach
-        next_idx = mask_after.argmax(dim=time_dim)
-
-        # Get the time coordinate at next breach index
-        # We need to select from time_coords using next_idx
-        next_breach_time = time_coords.isel({time_dim: next_idx})
+        # Use idxmax to get the actual time coordinate (not index)
+        # This is what compute_first_breach does and it works with dask
+        next_breach_time = mask_after.idxmax(dim=time_dim, skipna=True)
 
         # Set to NaT where there's no next occurrence
         next_breach_time = next_breach_time.where(has_next)
+
+        # For duration, we need the index of next breach
+        next_idx = mask_after.argmax(dim=time_dim)
 
         # Compute duration for the next event
         # Find first False AFTER next_idx
