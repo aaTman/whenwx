@@ -1,10 +1,11 @@
-# Scheduled job to process new forecast data
+# Batch processing of forecast data to GCS zarr (legacy)
+# Disabled: on-demand mode reads directly from Arraylake, no GCS needed
+# Re-enable the schedule if you switch back to pre-computed mode
 name: Process Forecast
 
 on:
-  schedule:
-    # Run every 30 minutes to check for new data
-    - cron: '*/30 * * * *'
+  # schedule:
+  #   - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       use_mock:
