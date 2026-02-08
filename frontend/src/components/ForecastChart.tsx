@@ -91,6 +91,25 @@ export function ForecastChart({
   // Use dataMin for the bottom of shaded area (Recharts clips to visible domain)
   const areaBottom = dataMin;
 
+  // Current time as lead time hours from forecast init
+  const currentLeadTimeHours = useMemo(() => {
+    const initTime = new Date(forecastInitTime).getTime();
+    return (Date.now() - initTime) / 3600000;
+  }, [forecastInitTime]);
+
+  const maxLeadTime = timeSeries.leadTimesHours[timeSeries.leadTimesHours.length - 1] || 360;
+  const nowInRange = currentLeadTimeHours >= 0 && currentLeadTimeHours <= maxLeadTime;
+
+  // Generate clean X-axis ticks: every 24h for long forecasts, every 6h for shorter
+  const xTicks = useMemo(() => {
+    const interval = maxLeadTime > 168 ? 24 : 6;
+    const ticks: number[] = [];
+    for (let t = 0; t <= maxLeadTime; t += interval) {
+      ticks.push(t);
+    }
+    return ticks;
+  }, [maxLeadTime]);
+
   return (
     <div className="forecast-chart-wrapper">
       <h4 className="forecast-chart-title">Temperature Forecast</h4>
@@ -99,6 +118,9 @@ export function ForecastChart({
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
           <XAxis
             dataKey="leadTimeHours"
+            type="number"
+            domain={[0, maxLeadTime]}
+            ticks={xTicks}
             stroke="rgba(255,255,255,0.4)"
             tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 12 }}
             label={{
@@ -147,6 +169,20 @@ export function ForecastChart({
                 fill: 'rgba(0,186,248,0.6)',
                 fontSize: 11,
                 position: 'insideTopRight',
+              }}
+            />
+          )}
+          {nowInRange && (
+            <ReferenceLine
+              x={currentLeadTimeHours}
+              stroke="#f87171"
+              strokeDasharray="4 4"
+              strokeOpacity={0.6}
+              label={{
+                value: 'Now',
+                fill: 'rgba(248,113,113,0.7)',
+                fontSize: 11,
+                position: 'insideTopLeft',
               }}
             />
           )}
