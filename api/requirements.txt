@@ -8,9 +8,13 @@ xarray>=2024.1.0
 zarr>=2.18.0
 gcsfs>=2024.1.0
 fsspec>=2024.1.0
+arraylake>=0.16.0
 
 # Rate limiting
 slowapi>=0.1.9
+
+# Timezone lookup
+timezonefinder>=6.0.0
 
 # Utilities
 pydantic>=2.6.0
