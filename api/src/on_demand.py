@@ -14,8 +14,12 @@ from datetime import datetime
 import numpy as np
 import xarray as xr
 import pandas as pd
+from timezonefinder import TimezoneFinder
 
 logger = logging.getLogger(__name__)
+
+# Module-level instance (loads data once, fast subsequent lookups)
+_timezone_finder = TimezoneFinder()
 
 # Cache the Arraylake session to avoid reconnecting on every request
 _arraylake_session = None
@@ -34,6 +38,9 @@ class EventMetrics:
     forecast_init_time: datetime
     actual_lat: float
     actual_lon: float
+    lead_times_hours: list
+    values_display: list
+    timezone: str
 
 
 def get_arraylake_dataset() -> xr.Dataset:
@@ -162,6 +169,23 @@ def compute_event_metrics(
         mask_values, time_coords, forecast_init_time, first_end_idx
     )
 
+    # Build time series for charting
+    lead_times_hours = [
+        pd.Timedelta(t).total_seconds() / 3600 if isinstance(t, np.timedelta64)
+        else float(t)
+        for t in time_coords
+    ]
+
+    raw_values = data.values
+    # Convert Kelvin to Celsius for temperature variables
+    if variable in ('2t', 't2m', '2m_temperature'):
+        values_display = [round(float(v) - 273.15, 2) for v in raw_values]
+    else:
+        values_display = [round(float(v), 2) for v in raw_values]
+
+    # Determine timezone from coordinates
+    tz_str = _timezone_finder.timezone_at(lat=actual_lat, lng=actual_lon) or "UTC"
+
     return EventMetrics(
         first_breach_time=first_breach_time,
         duration_hours=duration_hours,
@@ -170,6 +194,9 @@ def compute_event_metrics(
         forecast_init_time=forecast_init_time,
         actual_lat=actual_lat,
         actual_lon=actual_lon,
+        lead_times_hours=lead_times_hours,
+        values_display=values_display,
+        timezone=tz_str,
     )
 
 

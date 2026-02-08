@@ -33,6 +33,12 @@ export interface EventTiming {
   confidenceBand: ConfidenceBand;
 }
 
+export interface ForecastTimeSeries {
+  leadTimesHours: number[];
+  values: number[];
+  unit: string;
+}
+
 export interface WeatherQueryResult {
   location: Location;
   event: WeatherEvent;
@@ -40,6 +46,8 @@ export interface WeatherQueryResult {
   forecastInitTime: string;
   queryTime: string;
   dataSource: string;
+  timeSeries?: ForecastTimeSeries;
+  timezone?: string;
 }
 
 export interface ApiResponse<T> {

@@ -106,6 +106,16 @@ export function Results() {
               forecastInitTime: new Date().toISOString(),
               queryTime: new Date().toISOString(),
               dataSource: 'ECMWF IFS 15-day forecast (Demo)',
+              timeSeries: {
+                leadTimesHours: Array.from({ length: 120 }, (_, i) => i * 3),
+                values: Array.from({ length: 120 }, (_, i) => {
+                  // Simulate a temperature curve that dips below threshold around day 3
+                  const hour = i * 3;
+                  return Math.round((-5 + 8 * Math.sin(hour / 24 * Math.PI * 2 / 6) - hour * 0.03) * 100) / 100;
+                }),
+                unit: '°C',
+              },
+              timezone: 'America/New_York',
             }}
           />
         )}

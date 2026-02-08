@@ -1,5 +1,6 @@
 import type { WeatherQueryResult } from '../types/weather';
 import { getOperatorSymbol } from '../config/events';
+import { ForecastChart } from './ForecastChart';
 import './ResultsModule.css';
 
 interface ResultsModuleProps {
@@ -199,6 +200,16 @@ export function ResultsModule({ result }: ResultsModuleProps) {
           </p>
         </div>
       </div>
+
+      {/* Forecast Chart */}
+      {result.timeSeries && result.timezone && (
+        <ForecastChart
+          timeSeries={result.timeSeries}
+          threshold={event.thresholdDisplay}
+          forecastInitTime={forecastInitTime}
+          timezone={result.timezone}
+        />
+      )}
 
       {/* Confidence Band */}
       {timing.confidenceBand.earliest && timing.confidenceBand.latest && (

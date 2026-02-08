@@ -60,6 +60,13 @@ class WeatherEvent(BaseModel):
     unit: str
 
 
+class ForecastTimeSeries(BaseModel):
+    """Time series data for charting."""
+    leadTimesHours: list[float] = Field(..., description="Lead time from forecast init in hours")
+    values: list[float] = Field(..., description="Values in display units (e.g., Celsius)")
+    unit: str = Field(..., description="Display unit for values")
+
+
 class WeatherQueryResponse(BaseModel):
     """Response model for weather timing queries."""
     location: Location
@@ -68,6 +75,8 @@ class WeatherQueryResponse(BaseModel):
     forecastInitTime: str
     queryTime: str
     dataSource: str = "ECMWF IFS 15-day forecast"
+    timeSeries: Optional[ForecastTimeSeries] = None
+    timezone: Optional[str] = None
 
 
 # Event definitions (should match frontend)
@@ -201,6 +210,12 @@ async def _query_on_demand(lat: float, lon: float, event: WeatherEvent) -> Weath
         ),
         forecastInitTime=metrics.forecast_init_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
         queryTime=datetime.utcnow().isoformat() + 'Z',
+        timeSeries=ForecastTimeSeries(
+            leadTimesHours=metrics.lead_times_hours,
+            values=metrics.values_display,
+            unit=event.unit,
+        ),
+        timezone=metrics.timezone,
     )
 
 
