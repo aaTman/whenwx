@@ -177,11 +177,19 @@ def compute_event_metrics(
     ]
 
     raw_values = data.values
-    # Convert Kelvin to Celsius for temperature variables
+    # Convert Kelvin to Celsius for temperature variables, filtering out NaN/Inf
+    valid_mask = np.isfinite(raw_values)
     if variable in ('2t', 't2m', '2m_temperature'):
-        values_display = [round(float(v) - 273.15, 2) for v in raw_values]
+        values_display = [round(float(v) - 273.15, 2) if valid_mask[i] else None for i, v in enumerate(raw_values)]
     else:
-        values_display = [round(float(v), 2) for v in raw_values]
+        values_display = [round(float(v), 2) if valid_mask[i] else None for i, v in enumerate(raw_values)]
+
+    # Filter out entries with None values (keep only valid data points)
+    paired = [(h, v) for h, v in zip(lead_times_hours, values_display) if v is not None]
+    if paired:
+        lead_times_hours, values_display = [list(x) for x in zip(*paired)]
+    else:
+        lead_times_hours, values_display = [], []
 
     # Determine timezone from coordinates
     tz_str = _timezone_finder.timezone_at(lat=actual_lat, lng=actual_lon) or "UTC"
