@@ -11,6 +11,9 @@ interface CachedResult {
 }
 
 function getCacheKey(params: QueryParams): string {
+  if (params.variable && params.threshold !== undefined && params.operator) {
+    return `${CACHE_KEY_PREFIX}${params.lat}_${params.lon}_${params.variable}_${params.threshold}_${params.operator}`;
+  }
   return `${CACHE_KEY_PREFIX}${params.lat}_${params.lon}_${params.eventId}`;
 }
 
@@ -87,7 +90,17 @@ export function useWeatherQuery(params: QueryParams | null): UseWeatherQueryRetu
         const url = new URL(`${API_BASE_URL}/query`);
         url.searchParams.set('lat', params.lat.toString());
         url.searchParams.set('lon', params.lon.toString());
-        url.searchParams.set('event_id', params.eventId);
+
+        // New mode: variable + threshold + operator
+        if (params.variable && params.threshold !== undefined && params.operator) {
+          url.searchParams.set('variable', params.variable);
+          url.searchParams.set('threshold', params.threshold.toString());
+          url.searchParams.set('operator', params.operator);
+        }
+        // Legacy mode: event_id
+        else if (params.eventId) {
+          url.searchParams.set('event_id', params.eventId);
+        }
 
         const response = await fetch(url.toString(), {
           signal: controller.signal,
@@ -102,7 +115,13 @@ export function useWeatherQuery(params: QueryParams | null): UseWeatherQueryRetu
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.detail || `Request failed: ${response.status}`);
+          const detail = errorData.detail;
+          const message = typeof detail === 'string'
+            ? detail
+            : Array.isArray(detail)
+              ? detail.map((d: { msg?: string }) => d.msg).join(', ')
+              : `Request failed: ${response.status}`;
+          throw new Error(message);
         }
 
         const result = await response.json();
@@ -122,7 +141,7 @@ export function useWeatherQuery(params: QueryParams | null): UseWeatherQueryRetu
     fetchData();
 
     return () => controller.abort();
-  }, [params?.lat, params?.lon, params?.eventId, fetchTrigger]);
+  }, [params?.lat, params?.lon, params?.variable, params?.threshold, params?.operator, params?.eventId, fetchTrigger]);
 
   const refetch = () => setFetchTrigger(prev => prev + 1);
 

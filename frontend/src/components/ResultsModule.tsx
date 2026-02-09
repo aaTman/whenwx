@@ -1,7 +1,17 @@
 import type { WeatherQueryResult } from '../types/weather';
-import { getOperatorSymbol } from '../config/events';
 import { ForecastChart } from './ForecastChart';
 import './ResultsModule.css';
+
+function getOperatorSymbol(operator: string): string {
+  const symbols: Record<string, string> = {
+    lt: '<',
+    gt: '>',
+    lte: '\u2264',
+    gte: '\u2265',
+    eq: '='
+  };
+  return symbols[operator] || operator;
+}
 
 interface ResultsModuleProps {
   result: WeatherQueryResult;
@@ -208,6 +218,8 @@ export function ResultsModule({ result }: ResultsModuleProps) {
           threshold={event.thresholdDisplay}
           forecastInitTime={forecastInitTime}
           timezone={result.timezone}
+          variableLabel={event.name}
+          operator={event.operator as 'lt' | 'gt'}
         />
       )}
 

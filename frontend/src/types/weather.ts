@@ -59,5 +59,12 @@ export interface ApiResponse<T> {
 export interface QueryParams {
   lat: number;
   lon: number;
-  eventId: string;
+  /** New mode: variable ID (e.g., '2t', 'wind_speed', 'tprate') */
+  variable?: string;
+  /** New mode: threshold in backend storage units */
+  threshold?: number;
+  /** New mode: comparison operator */
+  operator?: 'lt' | 'gt';
+  /** Legacy mode: event ID */
+  eventId?: string;
 }

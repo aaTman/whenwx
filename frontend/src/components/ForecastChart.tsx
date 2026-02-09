@@ -18,11 +18,15 @@ interface ForecastChartProps {
   threshold: number;
   forecastInitTime: string;
   timezone: string;
+  /** Label for the variable (e.g., "Temperature", "Wind Speed"). Defaults to "Temperature". */
+  variableLabel?: string;
+  /** Operator for threshold comparison. 'lt' shades below, 'gt' shades above. Defaults to 'lt'. */
+  operator?: 'lt' | 'gt';
 }
 
 interface ChartDataPoint {
   leadTimeHours: number;
-  temperature: number;
+  value: number;
   validTime: string;
 }
 
@@ -53,7 +57,7 @@ function CustomTooltip({
   return (
     <div className="forecast-tooltip">
       <p className="tooltip-temp">
-        {data.temperature.toFixed(1)}{unit}
+        {data.value.toFixed(1)}{unit}
       </p>
       <p className="tooltip-lead">+{Math.round(data.leadTimeHours)}h lead time</p>
       <p className="tooltip-time">{validTimeStr}</p>
@@ -66,30 +70,33 @@ export function ForecastChart({
   threshold,
   forecastInitTime,
   timezone,
+  variableLabel = 'Temperature',
+  operator = 'lt',
 }: ForecastChartProps) {
   const unit = timeSeries.unit;
   const chartData = useMemo<ChartDataPoint[]>(() => {
     const initTime = new Date(forecastInitTime).getTime();
     return timeSeries.leadTimesHours.map((hours, i) => ({
       leadTimeHours: hours,
-      temperature: timeSeries.values[i],
+      value: timeSeries.values[i],
       validTime: new Date(initTime + hours * 3600 * 1000).toISOString(),
     }));
   }, [timeSeries, forecastInitTime]);
 
   const { dataMin, dataMax } = useMemo(() => {
-    const temps = timeSeries.values;
+    const vals = timeSeries.values;
     return {
-      dataMin: Math.min(...temps),
-      dataMax: Math.max(...temps),
+      dataMin: Math.min(...vals),
+      dataMax: Math.max(...vals),
     };
   }, [timeSeries.values]);
 
   // Only show threshold shading if threshold is within or near the data range
   const thresholdInView = threshold >= dataMin - 5 && threshold <= dataMax + 5;
 
-  // Use dataMin for the bottom of shaded area (Recharts clips to visible domain)
-  const areaBottom = dataMin;
+  // Shading direction: 'lt' shades below threshold, 'gt' shades above
+  const areaY1 = operator === 'gt' ? threshold : dataMin;
+  const areaY2 = operator === 'gt' ? dataMax : threshold;
 
   // Current time as lead time hours from forecast init
   const currentLeadTimeHours = useMemo(() => {
@@ -112,7 +119,7 @@ export function ForecastChart({
 
   return (
     <div className="forecast-chart-wrapper">
-      <h4 className="forecast-chart-title">Temperature Forecast</h4>
+      <h4 className="forecast-chart-title">{variableLabel} Forecast</h4>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData} margin={{ top: 10, right: 50, left: 10, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
@@ -136,7 +143,7 @@ export function ForecastChart({
             tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 12 }}
             domain={['auto', 'auto']}
             label={{
-              value: `Temperature (${unit})`,
+              value: `${variableLabel} (${unit})`,
               fill: 'rgba(255,255,255,0.5)',
               angle: -90,
               position: 'insideLeft',
@@ -150,8 +157,8 @@ export function ForecastChart({
           />
           {thresholdInView && (
             <ReferenceArea
-              y1={areaBottom}
-              y2={threshold}
+              y1={areaY1}
+              y2={areaY2}
               fill="#60a5fa"
               fillOpacity={0.14}
               stroke="none"
@@ -188,7 +195,7 @@ export function ForecastChart({
           )}
           <Line
             type="monotone"
-            dataKey="temperature"
+            dataKey="value"
             stroke="#00BAF8"
             strokeWidth={2}
             dot={false}

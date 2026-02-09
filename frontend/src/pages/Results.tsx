@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useWeatherQuery } from '../hooks/useWeatherQuery';
 import { ResultsModule } from '../components/ResultsModule';
-import { getEventById } from '../config/events';
+import { getVariableById } from '../config/variables';
 import type { QueryParams } from '../types/weather';
 import './Results.css';
 
@@ -12,20 +12,39 @@ export function Results() {
   const queryParams = useMemo((): QueryParams | null => {
     const lat = parseFloat(searchParams.get('lat') || '');
     const lon = parseFloat(searchParams.get('lon') || '');
-    const eventId = searchParams.get('event') || '';
 
-    if (isNaN(lat) || isNaN(lon) || !eventId) {
-      return null;
+    if (isNaN(lat) || isNaN(lon)) return null;
+
+    // New mode: variable + threshold + operator
+    const variable = searchParams.get('variable');
+    const thresholdStr = searchParams.get('threshold');
+    const operator = searchParams.get('operator') as 'lt' | 'gt' | null;
+
+    if (variable && thresholdStr && operator) {
+      const threshold = parseFloat(thresholdStr);
+      if (isNaN(threshold)) return null;
+      return { lat, lon, variable, threshold, operator };
     }
 
-    return { lat, lon, eventId };
+    // Legacy mode: event=freezing → map to variable params
+    const eventId = searchParams.get('event');
+    if (eventId === 'freezing') {
+      return { lat, lon, variable: '2t', threshold: 263.15, operator: 'lt' };
+    }
+    if (eventId) {
+      return { lat, lon, eventId };
+    }
+
+    return null;
   }, [searchParams]);
 
-  const event = queryParams ? getEventById(queryParams.eventId) : null;
   const { data, loading, error } = useWeatherQuery(queryParams);
 
+  // Look up variable config for display
+  const variableConfig = queryParams?.variable ? getVariableById(queryParams.variable) : null;
+
   // Invalid params
-  if (!queryParams || !event) {
+  if (!queryParams) {
     return (
       <main className="results-page">
         <div className="results-container">
@@ -33,7 +52,7 @@ export function Results() {
             <h2>Invalid Request</h2>
             <p>Please provide valid location coordinates and weather event.</p>
             <Link to="/" className="back-link">
-              ← Back to Home
+              &larr; Back to Home
             </Link>
           </div>
         </div>
@@ -76,7 +95,7 @@ export function Results() {
             <h2>Error</h2>
             <p>{error}</p>
             <Link to="/" className="back-link">
-              ← Try Again
+              &larr; Try Again
             </Link>
           </div>
         )}
@@ -84,14 +103,25 @@ export function Results() {
         {data && <ResultsModule result={data} />}
 
         {/* Demo mode - show mock data when API not available */}
-        {!loading && !error && !data && (
+        {!loading && !error && !data && variableConfig && (
           <ResultsModule
             result={{
               location: {
                 latitude: queryParams.lat,
                 longitude: queryParams.lon,
               },
-              event: event,
+              event: {
+                id: `custom_${variableConfig.id}`,
+                name: variableConfig.label,
+                description: `${variableConfig.label} ${queryParams.operator === 'lt' ? 'below' : 'above'} threshold`,
+                variable: variableConfig.id,
+                threshold: queryParams.threshold ?? 0,
+                thresholdDisplay: queryParams.threshold !== undefined
+                  ? Math.round(variableConfig.convertFromBackend(queryParams.threshold) * 100) / 100
+                  : 0,
+                operator: queryParams.operator ?? 'lt',
+                unit: variableConfig.displayUnit,
+              },
               timing: {
                 firstBreachTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
                 durationHours: 18,
@@ -109,11 +139,10 @@ export function Results() {
               timeSeries: {
                 leadTimesHours: Array.from({ length: 120 }, (_, i) => i * 3),
                 values: Array.from({ length: 120 }, (_, i) => {
-                  // Simulate a temperature curve that dips below threshold around day 3
                   const hour = i * 3;
                   return Math.round((-5 + 8 * Math.sin(hour / 24 * Math.PI * 2 / 6) - hour * 0.03) * 100) / 100;
                 }),
-                unit: '°C',
+                unit: variableConfig.displayUnit,
               },
               timezone: 'America/New_York',
             }}
