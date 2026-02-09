@@ -10,8 +10,8 @@ primary_region = 'iad'
   dockerfile = 'Dockerfile'
 
 [env]
-  CORS_ORIGINS = '*'
-  RATE_LIMIT = '1/minute'
+  CORS_ORIGINS = 'https://taylorspalding.github.io,http://localhost:5173'
+  RATE_LIMIT = '5/minute'
   GCS_BUCKET = 'whenwx-forecast-data'
   GCS_PREFIX = 'output'
 
