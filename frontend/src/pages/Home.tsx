@@ -1,28 +1,43 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LocationInput } from '../components/LocationInput';
-import { EventSelector } from '../components/EventSelector';
-import type { Location, WeatherEvent } from '../types/weather';
+import { ThresholdBuilder } from '../components/ThresholdBuilder';
+import type { Location } from '../types/weather';
+import type { WeatherVariable } from '../config/variables';
 import './Home.css';
 
 export function Home() {
   const navigate = useNavigate();
   const [location, setLocation] = useState<Location | null>(null);
-  const [event, setEvent] = useState<WeatherEvent | null>(null);
+  const [selectedVariable, setSelectedVariable] = useState<WeatherVariable | null>(null);
+  const [threshold, setThreshold] = useState<number>(0);
+  const [operator, setOperator] = useState<'lt' | 'gt'>('lt');
+
+  const handleVariableChange = (variable: WeatherVariable | null) => {
+    setSelectedVariable(variable);
+    if (variable) {
+      setThreshold(variable.defaultThreshold);
+      setOperator(variable.defaultOperator);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (location && event) {
+    if (location && selectedVariable) {
+      // Convert threshold from display units to backend storage units
+      const backendThreshold = selectedVariable.convertToBackend(threshold);
       const params = new URLSearchParams({
         lat: location.latitude.toString(),
         lon: location.longitude.toString(),
-        event: event.id,
+        variable: selectedVariable.id,
+        threshold: backendThreshold.toString(),
+        operator: operator,
       });
       navigate(`/results?${params.toString()}`);
     }
   };
 
-  const isValid = location !== null && event !== null;
+  const isValid = location !== null && selectedVariable !== null;
 
   return (
     <main className="home-page">
@@ -38,7 +53,14 @@ export function Home() {
 
         <form className="home-form" onSubmit={handleSubmit}>
           <LocationInput value={location} onChange={setLocation} />
-          <EventSelector value={event} onChange={setEvent} />
+          <ThresholdBuilder
+            selectedVariable={selectedVariable}
+            threshold={threshold}
+            operator={operator}
+            onVariableChange={handleVariableChange}
+            onThresholdChange={setThreshold}
+            onOperatorChange={setOperator}
+          />
 
           <button
             type="submit"

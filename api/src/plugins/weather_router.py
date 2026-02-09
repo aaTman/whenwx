@@ -19,6 +19,8 @@ import pandas as pd
 
 from xpublish import Dependencies, Plugin, hookimpl
 
+from ..variables import get_variable, get_all_variables, LEGACY_EVENT_MAP
+
 logger = logging.getLogger(__name__)
 
 # On-demand computation mode (default: true)
@@ -117,34 +119,99 @@ class WeatherQueryPlugin(Plugin):
                 'events': [event.model_dump() for event in EVENTS.values()]
             }
 
+        @router.get('/variables')
+        async def list_variables():
+            """List available weather variables for custom thresholds."""
+            return {
+                'variables': [
+                    {
+                        'id': v.id,
+                        'label': v.label,
+                        'displayUnit': v.display_unit,
+                    }
+                    for v in get_all_variables()
+                ]
+            }
+
         @router.get('/query', response_model=WeatherQueryResponse)
         async def query_weather_timing(
             request: Request,
             lat: float = Query(..., ge=-90, le=90, description="Latitude"),
             lon: float = Query(..., ge=-180, le=180, description="Longitude"),
-            event_id: str = Query(..., description="Weather event ID"),
+            event_id: Optional[str] = Query(None, description="Legacy weather event ID"),
+            variable: Optional[str] = Query(None, description="Variable ID (e.g., '2t', 'wind_speed', 'tprate')"),
+            threshold: Optional[float] = Query(None, description="Threshold in storage units"),
+            operator: Optional[str] = Query(None, description="Comparison operator: 'lt' or 'gt'"),
             dataset: xr.Dataset = Depends(deps.dataset),
         ) -> WeatherQueryResponse:
             """
             Query when a weather condition will first be met at a location.
 
-            Returns the first breach time, duration, and model consistency.
+            Accepts either:
+            - variable + threshold + operator (new mode)
+            - event_id (legacy mode, maps to variable/threshold/operator)
             """
-            # Validate event
-            if event_id not in EVENTS:
+            # Resolve params from either new or legacy mode
+            if variable and threshold is not None and operator:
+                # New mode: raw variable/threshold/operator
+                var_config = get_variable(variable)
+                if not var_config:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Unknown variable: {variable}. Available: {[v.id for v in get_all_variables()]}"
+                    )
+                if operator not in ('lt', 'gt', 'lte', 'gte'):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid operator: {operator}. Must be 'lt' or 'gt'."
+                    )
+                # Build a WeatherEvent for the response
+                threshold_display = round(var_config.to_display(threshold), 2)
+                event = WeatherEvent(
+                    id=f"custom_{variable}",
+                    name=f"{var_config.label}",
+                    description=f"{var_config.label} {'below' if operator == 'lt' else 'above'} {threshold_display}{var_config.display_unit}",
+                    variable=variable,
+                    threshold=threshold,
+                    thresholdDisplay=threshold_display,
+                    operator=operator,
+                    unit=var_config.display_unit,
+                )
+            elif event_id:
+                # Legacy mode: look up from EVENTS dict or LEGACY_EVENT_MAP
+                if event_id in EVENTS:
+                    event = EVENTS[event_id]
+                elif event_id in LEGACY_EVENT_MAP:
+                    legacy = LEGACY_EVENT_MAP[event_id]
+                    var_config = get_variable(legacy['variable'])
+                    threshold_display = round(var_config.to_display(legacy['threshold']), 2) if var_config else legacy['threshold']
+                    event = WeatherEvent(
+                        id=event_id,
+                        name=event_id.replace('_', ' ').title(),
+                        description='',
+                        variable=legacy['variable'],
+                        threshold=legacy['threshold'],
+                        thresholdDisplay=threshold_display,
+                        operator=legacy['operator'],
+                        unit=var_config.display_unit if var_config else 'K',
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Unknown event: {event_id}. Available: {list(EVENTS.keys())}"
+                    )
+            else:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Unknown event: {event_id}. Available: {list(EVENTS.keys())}"
+                    detail="Must provide either (variable + threshold + operator) or event_id"
                 )
-
-            event = EVENTS[event_id]
 
             # Use on-demand computation if enabled
             if ON_DEMAND_MODE:
                 return await _query_on_demand(lat, lon, event)
 
             # Otherwise use pre-computed data from GCS zarr
-            return await _query_precomputed(lat, lon, event, event_id, dataset)
+            return await _query_precomputed(lat, lon, event, event.id, dataset)
 
         @router.get('/health')
         async def health_check():

@@ -16,6 +16,8 @@ import xarray as xr
 import pandas as pd
 from timezonefinder import TimezoneFinder
 
+from .variables import get_variable
+
 logger = logging.getLogger(__name__)
 
 # Module-level instance (loads data once, fast subsequent lookups)
@@ -131,12 +133,27 @@ def compute_event_metrics(
     actual_lat = float(point_data.latitude.values)
     actual_lon = float(point_data.longitude.values)
 
-    # Get the variable data for this point
-    if variable not in point_data:
-        raise ValueError(f"Variable '{variable}' not found in dataset")
+    # Look up variable config for derived variable support
+    var_config = get_variable(variable)
 
-    # Load the time series data for this single point (fast!)
-    data = point_data[variable].compute()
+    # Load data — handle derived variables (e.g., wind speed from 10u + 10v)
+    if var_config and var_config.is_derived:
+        # Wind speed: sqrt(10u² + 10v²)
+        components = []
+        for ecmwf_var in var_config.ecmwf_variables:
+            if ecmwf_var not in point_data:
+                raise ValueError(f"Variable '{ecmwf_var}' not found in dataset (needed for '{variable}')")
+            components.append(point_data[ecmwf_var].compute())
+        if variable == 'wind_speed':
+            data = np.sqrt(components[0] ** 2 + components[1] ** 2)
+        else:
+            raise ValueError(f"Unknown derived variable: {variable}")
+    else:
+        # Simple variable — load directly
+        ecmwf_var = var_config.ecmwf_variables[0] if var_config else variable
+        if ecmwf_var not in point_data:
+            raise ValueError(f"Variable '{ecmwf_var}' not found in dataset")
+        data = point_data[ecmwf_var].compute()
 
     # Get the time dimension (usually 'step' for forecast data)
     time_dim = 'step' if 'step' in data.dims else 'time'
@@ -177,12 +194,13 @@ def compute_event_metrics(
     ]
 
     raw_values = data.values
-    # Convert Kelvin to Celsius for temperature variables, filtering out NaN/Inf
+    # Convert to display units using variable registry, filtering out NaN/Inf
     valid_mask = np.isfinite(raw_values)
-    if variable in ('2t', 't2m', '2m_temperature'):
-        values_display = [round(float(v) - 273.15, 2) if valid_mask[i] else None for i, v in enumerate(raw_values)]
-    else:
-        values_display = [round(float(v), 2) if valid_mask[i] else None for i, v in enumerate(raw_values)]
+    display_fn = var_config.to_display if var_config else (lambda x: x)
+    values_display = [
+        round(display_fn(float(v)), 2) if valid_mask[i] else None
+        for i, v in enumerate(raw_values)
+    ]
 
     # Filter out entries with None values (keep only valid data points)
     paired = [(h, v) for h, v in zip(lead_times_hours, values_display) if v is not None]
