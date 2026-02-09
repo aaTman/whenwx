@@ -2,33 +2,38 @@
 
 **When will the weather...?**
 
-A web application that predicts when specific weather conditions will occur at a given location, using ECMWF IFS 15-day forecast data.
+A web application that predicts when specific weather conditions will occur at a given location, using ECMWF IFS 15-day forecast data served on-demand from [Earthmover Arraylake](https://earthmover.io).
 
 ## Features
 
+- **Custom Thresholds**: Choose a weather variable (Temperature, Wind Speed, Precipitation), set any threshold, and pick above/below
 - **Location Input**: Enter coordinates manually or use browser geolocation
-- **Weather Events**: Select from predefined weather thresholds (currently: freezing temperatures < -10°C)
-- **Timing Results**: See when the condition will first occur, how long it will last, and model confidence
-- **Beautiful UI**: Animated gradient background with a clean, modern design
+- **Timing Results**: See when the condition will first occur, how long it will last, and the next occurrence
+- **Interactive Forecast Chart**: Recharts-powered line plot with threshold shading, "Now" marker, and hover tooltips showing valid time in local timezone
+- **On-Demand Computation**: Each query reads a single point from Arraylake in ~2 seconds — no batch processing needed
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         DATA PIPELINE                           │
-│  Earthmover Arraylake (ECMWF IFS) → Processing Job → GCS Zarr  │
+│                       DATA SOURCE                               │
+│  Earthmover Arraylake (ECMWF IFS 15-day forecast)              │
 └─────────────────────────────────────────────────────────────────┘
+                                │
+                          on-demand query
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                           API LAYER                             │
-│  xpublish (FastAPI) on Fly.io - Rate limited: 1 req/min        │
+│  FastAPI (xpublish) on Fly.io — rate limited: 5 req/min        │
+│  Computes metrics + time series for a single lat/lon point     │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                          FRONTEND                               │
-│  React SPA on GitHub Pages                                      │
+│  React 19 + TypeScript + Vite on GitHub Pages                  │
+│  Recharts for interactive forecast visualization               │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -36,11 +41,11 @@ A web application that predicts when specific weather conditions will occur at a
 
 | Component | Technology |
 |-----------|-----------|
-| Frontend | Vite + React + TypeScript |
-| Backend | Python (xarray, zarr, arraylake) |
+| Frontend | Vite + React 19 + TypeScript + Recharts |
+| Backend | Python (xarray, arraylake, timezonefinder) |
 | API | FastAPI + xpublish on Fly.io |
-| Storage | Google Cloud Storage (zarr) |
-| Hosting | GitHub Pages (frontend) |
+| Data | Earthmover Arraylake (ECMWF IFS) |
+| Hosting | GitHub Pages (frontend), Fly.io (API) |
 
 ## Project Structure
 
@@ -48,32 +53,26 @@ A web application that predicts when specific weather conditions will occur at a
 whenwx/
 ├── frontend/          # React TypeScript app
 │   ├── src/
-│   │   ├── components/   # UI components
-│   │   ├── hooks/        # Custom React hooks
-│   │   ├── pages/        # Page components
-│   │   ├── config/       # Weather event definitions
+│   │   ├── components/   # UI components (ThresholdBuilder, ForecastChart, etc.)
+│   │   ├── hooks/        # useWeatherQuery (fetch + cache)
+│   │   ├── pages/        # Home, Results
+│   │   ├── config/       # variables.ts (extensible variable registry)
 │   │   └── types/        # TypeScript interfaces
 │   └── ...
 │
-├── backend/           # Python data processing
-│   └── src/
-│       ├── processors/   # Weather event processors
-│       ├── pipeline/     # Data ingestion & export
-│       └── main.py       # Processing entry point
-│
 ├── api/               # xpublish API server
 │   └── src/
-│       ├── plugins/      # Custom xpublish plugins
-│       ├── middleware/   # Rate limiting
+│       ├── plugins/      # weather_router.py (query endpoint)
+│       ├── middleware/   # Rate limiting (SlowAPI)
+│       ├── variables.py  # Variable registry + unit conversions
+│       ├── on_demand.py  # Single-point computation from Arraylake
 │       └── main.py       # FastAPI app
 │
 └── .github/
-    └── workflows/     # CI/CD pipelines
+    └── workflows/     # CI/CD (GitHub Pages deploy)
 ```
 
 ## Development
-
-This project uses `uv` for Python dependency management.
 
 ### Frontend
 
@@ -83,33 +82,23 @@ npm install
 npm run dev
 ```
 
-Visit http://localhost:3000
+Visit http://localhost:5173/whenwx/
 
 ### API (Demo Mode)
 
 ```bash
 cd api
-uv sync                                                    # Install dependencies
-DEMO_MODE=true uv run uvicorn src.main:app --reload        # Start server
+uv sync
+DEMO_MODE=true uv run uvicorn src.main:app --reload
 ```
 
 Visit http://localhost:8000/docs
-
-### Backend Processing
-
-```bash
-cd backend
-uv sync                                                    # Install dependencies
-
-# Test with mock data
-uv run python -m src.main --mock --local ./output.zarr
-```
 
 ## Deployment
 
 ### Frontend (GitHub Pages)
 
-Push to `main` branch triggers automatic deployment via GitHub Actions.
+Push to `main` triggers automatic deployment via GitHub Actions.
 
 ### API (Fly.io)
 
@@ -118,55 +107,55 @@ cd api
 fly deploy
 ```
 
-### Processing (GitHub Actions)
-
-Runs automatically every 6 hours via scheduled workflow, or manually via workflow dispatch.
-
 ## Configuration
 
 ### Environment Variables
 
-**API:**
-- `GCS_BUCKET` - GCS bucket for zarr data
-- `DEMO_MODE` - Use mock data (true/false)
-- `RATE_LIMIT` - Rate limit string (e.g., "1/minute")
-- `CORS_ORIGINS` - Allowed CORS origins
-
-**Backend:**
-- `ARRAYLAKE_TOKEN` - Earthmover Arraylake API token
-- `GCS_BUCKET` - Output bucket
-- `GOOGLE_CLOUD_PROJECT` - GCP project ID
+**API (set in `api/fly.toml`):**
+- `ARRAYLAKE_TOKEN` — Earthmover Arraylake API token (set as Fly secret)
+- `RATE_LIMIT` — Rate limit string (default: `5/minute`)
+- `CORS_ORIGINS` — Allowed CORS origins
+- `ON_DEMAND_MODE` — Use on-demand Arraylake computation (default: `true`)
+- `DEMO_MODE` — Use mock data for local dev (default: `false`)
 
 **Frontend:**
-- `VITE_API_URL` - API base URL
+- `VITE_API_URL` — API base URL (default: `http://localhost:8080`)
 
-## Adding New Weather Events
+## Adding a New Weather Variable
 
-1. Add event config in `backend/src/config.py`:
+1. Add to the backend registry in `api/src/variables.py`:
 ```python
-WeatherEventConfig(
-    event_id='heavy-rain',
-    variable='tprate',
-    threshold=0.00278,  # ~10 mm/hr
-    operator='gt',
-    ...
-)
+_register(VariableConfig(
+    id='dewpoint',
+    label='Dewpoint',
+    ecmwf_variables=['2d'],
+    display_unit='°C',
+    storage_unit='K',
+    to_display=_kelvin_to_celsius,
+    to_storage=_celsius_to_kelvin,
+))
 ```
 
-2. Add frontend event in `frontend/src/config/events.ts`:
+2. Add to the frontend registry in `frontend/src/config/variables.ts`:
 ```typescript
 {
-  id: 'heavy-rain',
-  name: 'Heavy Rain',
-  ...
+  id: 'dewpoint',
+  label: 'Dewpoint',
+  ecmwfVariable: '2d',
+  defaultThreshold: 15,
+  defaultOperator: 'gt',
+  displayUnit: '°C',
+  min: -40, max: 40, step: 1,
+  convertToBackend: (c) => c + 273.15,
+  convertFromBackend: (k) => k - 273.15,
 }
 ```
 
-3. Add API event in `api/src/plugins/weather_router.py`
+That's it — the variable will appear in the dropdown automatically.
 
 ## Data Sources
 
-- **ECMWF IFS 15-day forecast** via [Earthmover Arraylake](https://earthmover.io)
+- **ECMWF IFS 15-day forecast** via [Brightband](https://www.brightband.com/) + [Earthmover Arraylake](https://earthmover.io)
 - Updated ~4x daily (00Z, 06Z, 12Z, 18Z cycles)
 
 ## License
