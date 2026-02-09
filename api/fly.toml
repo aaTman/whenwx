@@ -10,7 +10,7 @@ primary_region = 'iad'
   dockerfile = 'Dockerfile'
 
 [env]
-  CORS_ORIGINS = 'https://taylorspalding.github.io,http://localhost:5173'
+  CORS_ORIGINS = 'https://whenwx.espr.ai,http://localhost:5173'
   RATE_LIMIT = '5/minute'
   GCS_BUCKET = 'whenwx-forecast-data'
   GCS_PREFIX = 'output'
