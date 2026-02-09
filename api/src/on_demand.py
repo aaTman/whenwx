@@ -158,17 +158,28 @@ def compute_event_metrics(
     # Get the time dimension (usually 'step' for forecast data)
     time_dim = 'step' if 'step' in data.dims else 'time'
 
-    # Compute the mask based on operator
+    # Filter out NaN/Inf values before computing the mask.
+    # NaN comparisons return False, which would incorrectly break
+    # contiguous events at timesteps with missing data.
+    valid = np.isfinite(data.values)
+    valid_indices = np.where(valid)[0]
+
+    if len(valid_indices) == 0:
+        raise ValueError("No valid data found for this location")
+
+    data_valid = data.isel({time_dim: valid_indices})
+
+    # Compute the mask based on operator (only on valid data)
     if operator == 'lt':
-        mask = data < threshold
+        mask = data_valid < threshold
     elif operator == 'gt':
-        mask = data > threshold
+        mask = data_valid > threshold
     elif operator == 'lte':
-        mask = data <= threshold
+        mask = data_valid <= threshold
     elif operator == 'gte':
-        mask = data >= threshold
+        mask = data_valid >= threshold
     elif operator == 'eq':
-        mask = np.abs(data - threshold) < 1e-6
+        mask = np.abs(data_valid - threshold) < 1e-6
     else:
         raise ValueError(f"Unknown operator: {operator}")
 
@@ -186,28 +197,16 @@ def compute_event_metrics(
         mask_values, time_coords, forecast_init_time, first_end_idx
     )
 
-    # Build time series for charting
+    # Build time series for charting (using valid-only data)
     lead_times_hours = [
         pd.Timedelta(t).total_seconds() / 3600 if isinstance(t, np.timedelta64)
         else float(t)
         for t in time_coords
     ]
 
-    raw_values = data.values
-    # Convert to display units using variable registry, filtering out NaN/Inf
-    valid_mask = np.isfinite(raw_values)
+    raw_values = data_valid.values
     display_fn = var_config.to_display if var_config else (lambda x: x)
-    values_display = [
-        round(display_fn(float(v)), 2) if valid_mask[i] else None
-        for i, v in enumerate(raw_values)
-    ]
-
-    # Filter out entries with None values (keep only valid data points)
-    paired = [(h, v) for h, v in zip(lead_times_hours, values_display) if v is not None]
-    if paired:
-        lead_times_hours, values_display = [list(x) for x in zip(*paired)]
-    else:
-        lead_times_hours, values_display = [], []
+    values_display = [round(display_fn(float(v)), 2) for v in raw_values]
 
     # Determine timezone from coordinates
     tz_str = _timezone_finder.timezone_at(lat=actual_lat, lng=actual_lon) or "UTC"
