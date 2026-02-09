@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { WEATHER_VARIABLES } from '../config/variables';
 import type { WeatherVariable } from '../config/variables';
 import './ThresholdBuilder.css';
@@ -19,6 +20,31 @@ export function ThresholdBuilder({
   onThresholdChange,
   onOperatorChange,
 }: ThresholdBuilderProps) {
+  // Local string state so the user can clear the field while typing
+  const [inputValue, setInputValue] = useState(String(threshold));
+
+  // Sync when parent threshold changes (e.g., variable switch resets default)
+  useEffect(() => {
+    setInputValue(String(threshold));
+  }, [threshold]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setInputValue(raw);
+    const parsed = parseFloat(raw);
+    if (!isNaN(parsed)) {
+      onThresholdChange(parsed);
+    }
+  };
+
+  const handleInputBlur = () => {
+    // On blur, if empty or invalid, reset to current threshold
+    const parsed = parseFloat(inputValue);
+    if (isNaN(parsed)) {
+      setInputValue(String(threshold));
+    }
+  };
+
   const handleVariableChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const varId = e.target.value;
     if (!varId) {
@@ -79,8 +105,9 @@ export function ThresholdBuilder({
               <input
                 id="threshold"
                 type="number"
-                value={threshold}
-                onChange={e => onThresholdChange(parseFloat(e.target.value) || 0)}
+                value={inputValue}
+                onChange={handleInputChange}
+                onBlur={handleInputBlur}
                 min={selectedVariable.min}
                 max={selectedVariable.max}
                 step={selectedVariable.step}

@@ -9,4 +9,4 @@ if [ -n "$GOOGLE_APPLICATION_CREDENTIALS_JSON" ]; then
 fi
 
 # Start the application
-exec python -m uvicorn src.main:app --host 0.0.0.0 --port 8080
+exec python -m uvicorn src.main:app --host 0.0.0.0 --port 8080 --timeout-keep-alive 5 --timeout-graceful-shutdown 30

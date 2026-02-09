@@ -2,6 +2,8 @@
 Rate limiting middleware using SlowAPI.
 """
 
+import os
+
 from fastapi import FastAPI, Request
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -40,10 +42,13 @@ def get_client_ip(request: Request) -> str:
     return "unknown"
 
 
+# Read rate limit from env (set in fly.toml or .env)
+_rate_limit = os.getenv("RATE_LIMIT", "5/minute")
+
 # Create the limiter instance with custom key function
 limiter = Limiter(
     key_func=get_client_ip,
-    default_limits=["60/hour"],  # Default rate limit
+    default_limits=[_rate_limit],
     storage_uri="memory://",  # In-memory storage (use redis:// for distributed)
 )
 

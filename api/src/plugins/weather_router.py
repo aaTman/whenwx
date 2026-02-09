@@ -20,6 +20,7 @@ import pandas as pd
 from xpublish import Dependencies, Plugin, hookimpl
 
 from ..variables import get_variable, get_all_variables, LEGACY_EVENT_MAP
+from ..middleware import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,7 @@ class WeatherQueryPlugin(Plugin):
             }
 
         @router.get('/query', response_model=WeatherQueryResponse)
+        @limiter.limit("5/minute")
         async def query_weather_timing(
             request: Request,
             lat: float = Query(..., ge=-90, le=90, description="Latitude"),
