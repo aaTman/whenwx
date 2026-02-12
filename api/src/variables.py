@@ -36,11 +36,13 @@ def _ms_to_kmh(ms: float) -> float:
 def _kmh_to_ms(kmh: float) -> float:
     return kmh / 3.6
 
-def _kgm2s_to_mmhr(kgm2s: float) -> float:
-    return kgm2s * 3600.0
+def _precip_rate_to_mmhr(rate_ms: float) -> float:
+    """Convert precipitation rate from m/s to mm/hr."""
+    return rate_ms * 3_600_000.0  # m/s → mm/s (×1000) → mm/hr (×3600)
 
-def _mmhr_to_kgm2s(mmhr: float) -> float:
-    return mmhr / 3600.0
+def _mmhr_to_precip_rate(mmhr: float) -> float:
+    """Convert precipitation rate from mm/hr to m/s."""
+    return mmhr / 3_600_000.0
 
 
 # --- Variable registry ---
@@ -74,13 +76,14 @@ _register(VariableConfig(
 ))
 
 _register(VariableConfig(
-    id='tprate',
+    id='tp',
     label='Precipitation',
-    ecmwf_variables=['tprate'],
+    ecmwf_variables=['tp'],
     display_unit='mm/hr',
-    storage_unit='kg/m²/s',
-    to_display=_kgm2s_to_mmhr,
-    to_storage=_mmhr_to_kgm2s,
+    storage_unit='m/s',  # Rate derived from accumulated tp (meters)
+    to_display=_precip_rate_to_mmhr,
+    to_storage=_mmhr_to_precip_rate,
+    is_derived=True,
 ))
 
 

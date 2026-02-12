@@ -146,6 +146,33 @@ def compute_event_metrics(
             components.append(point_data[ecmwf_var].compute())
         if variable == 'wind_speed':
             data = np.sqrt(components[0] ** 2 + components[1] ** 2)
+        elif variable == 'tp':
+            # Total precipitation is accumulated (meters). Compute rate by
+            # differencing consecutive steps and dividing by the time interval.
+            tp_data = components[0]
+            time_dim = 'step' if 'step' in tp_data.dims else 'time'
+            time_vals = tp_data[time_dim].values
+
+            # Compute differences in accumulated precip
+            tp_values = tp_data.values
+            dp = np.diff(tp_values)  # length N-1
+
+            # Compute time intervals in seconds
+            dt = np.array([
+                pd.Timedelta(time_vals[i+1] - time_vals[i]).total_seconds()
+                if isinstance(time_vals[i], np.timedelta64)
+                else (pd.Timestamp(time_vals[i+1]) - pd.Timestamp(time_vals[i])).total_seconds()
+                for i in range(len(time_vals) - 1)
+            ])
+            # Rate in m/s (avoid division by zero)
+            dt = np.where(dt == 0, 1, dt)
+            rate = dp / dt
+            # Clamp negative rates to 0 (can happen due to model resets)
+            rate = np.maximum(rate, 0)
+
+            # Build an xarray DataArray with the end-of-interval times
+            end_times = time_vals[1:]
+            data = xr.DataArray(rate, dims=[time_dim], coords={time_dim: end_times})
         else:
             raise ValueError(f"Unknown derived variable: {variable}")
     else:
