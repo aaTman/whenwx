@@ -48,19 +48,6 @@ export const WEATHER_VARIABLES: WeatherVariable[] = [
     convertToBackend: (kmh: number) => kmh / 3.6,
     convertFromBackend: (ms: number) => ms * 3.6,
   },
-  {
-    id: 'tp',
-    label: 'Precipitation',
-    ecmwfVariable: 'tp',
-    defaultThreshold: 5,
-    defaultOperator: 'gt',
-    displayUnit: 'mm/hr',
-    min: 0,
-    max: 100,
-    step: 1,
-    convertToBackend: (mmhr: number) => mmhr / 3_600_000,  // mm/hr → m/s
-    convertFromBackend: (ms: number) => ms * 3_600_000,    // m/s → mm/hr
-  },
 ];
 
 export function getVariableById(id: string): WeatherVariable | undefined {
